@@ -1,0 +1,14 @@
+export default {
+    uri: '请求地址',
+    method: '请求方法',
+    ip: '请求IP',
+    user_agent: 'User-Agent',
+    params: '请求参数',
+    response: '响应内容',
+    header: '请求Header',
+    status: '接口返回状态码',
+    cost_ms: '耗时(毫秒)',
+    create_time: '请求时间',
+    route: '接口路由',
+    'quick Search Fields': 'id',
+}

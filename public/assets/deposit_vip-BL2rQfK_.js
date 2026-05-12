@@ -1,0 +1,1 @@
+const e={id:"唯一配置ID,固定为1",title:"标题",context:"说明内容",amount_list:"充值金额配置列表",pay_channels:"支持支付通道列表",enable_reward:"是否启用充值奖励",reward_strategy:"奖励策略",reward_value:"奖励值",vip1:"vip1配置",vip2:"vip2配置",vip3:"vip3配置",update_time:"更新时间","quick Search Fields":"唯一配置ID,固定为1"};export{e as default};

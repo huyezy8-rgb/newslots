@@ -1,0 +1,20 @@
+<?php
+return [
+    'Recharge config not exist' => '充值配置不存在',
+    'Get recharge config success' => '获取充值配置成功',
+    'Please input recharge activity' => '请输入充值活动',
+    'Recharge amount error' => '充值金额错误',
+    'Payment method param error' => '支付方式参数错误',
+    'Please select payment method' => '请选择支付方式',
+    'This level already recharged' => '该档位已充值',
+    'Please complete previous level activity' => '请先完成上一等级活动',
+    'Activity participation failed, please notify admin to check' => '参与活动失败,请通知管理员检查',
+    'This level today already recharged' => '该档位今日已充值',
+    'Not meet participation activity conditions' => '不满足参与活动条件',
+    'Already participate in this activity or other activities cannot be repeated' => '已参加该活动或其他活动不可重复参加',
+    'Modify daily recharge activity status error' => '修改每日充值活动状态错误',
+    'Create order failed' => '创建订单失败',
+    'Create success' => '创建成功',
+    'Get bank list success' => '获取银行列表成功',
+    'Get bank list failed' => '获取银行列表失败',
+]; 

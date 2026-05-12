@@ -1,0 +1,1 @@
+const t={id:"id",user_id:"user_id",user__nickname:"nickname",current_amount:"current_amount",withdraw_amount:"withdraw_amount",status:"status",is_lucky:"is_lucky","quick Search Fields":"id"};export{t as default};

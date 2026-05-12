@@ -1,0 +1,1 @@
+const e={id:"id",title:"title",context:"context",amount_list:"amount_list",pay_channels:"pay_channels",enable_reward:"enable_reward",reward_strategy:"reward_strategy",reward_value:"reward_value",vip1:"vip1",vip2:"vip2",vip3:"vip3",update_time:"update_time","quick Search Fields":"id"};export{e as default};

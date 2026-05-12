@@ -1,0 +1,14 @@
+export default {
+    id: '主键ID',
+    order_no: '充值订单号',
+    user_id: '用户ID',
+    channel_id: '渠道ID',
+    amount: '充值金额（单位:元）',
+    pay_type: '支付方式',
+    pay_status: '支付状态',
+    remark: '备注信息',
+    paid_at: '支付时间',
+    created_at: '创建时间',
+    updated_at: '更新时间',
+    'quick Search Fields': '主键ID',
+}

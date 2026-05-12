@@ -1,0 +1,11 @@
+export default {
+    name: '宝箱名称',
+    recharge_amount: '充值条件',
+    invite_count: '邀请有效用户数',
+    reward_amount: '奖励金额',
+    default_image: '默认图片',
+    waiting_image: '待领取图片',
+    received_image: '已领取图片',
+    sort: '排序',
+    'quick Search Fields': 'id、宝箱名称',
+}

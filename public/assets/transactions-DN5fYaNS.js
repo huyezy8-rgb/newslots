@@ -1,0 +1,1 @@
+const a={id:"id",user_id:"user_id",game_id:"game_id",channel_id:"channel_id",amount:"amount",real_amount:"real_amount",reason:"reason",round_id:"round_id",transaction_id:"transaction_id",req_time:"req_time","quick Search Fields":"id"};export{a as default};

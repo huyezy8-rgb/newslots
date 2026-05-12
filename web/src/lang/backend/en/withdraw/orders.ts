@@ -1,0 +1,15 @@
+export default {
+    id: 'id',
+    user_id: 'user_id',
+    channel_id: 'channel_id',
+    amount: 'amount',
+    real_amount: 'real_amount',
+    fee: 'fee',
+    wallet_type: 'wallet_type',
+    account_info: 'account_info',
+    status: 'status',
+    audit_remark: 'audit_remark',
+    create_time: 'create_time',
+    update_time: 'update_time',
+    'quick Search Fields': 'id',
+}

@@ -1,0 +1,1 @@
+const t={id:"主键ID",user_id:"用户ID",payment_method_id:"支付方式ID",unique_tag:"支付方式唯一标识",account_name:"用户自定义账号名称",is_default:"是否默认账号",account_info:"账号详细信息JSON",status:"状态","status 0":"禁用","status 1":"启用",create_time:"创建时间戳",update_time:"更新时间戳","quick Search Fields":"主键ID"};export{t as default};

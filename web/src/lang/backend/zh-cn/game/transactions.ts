@@ -1,0 +1,13 @@
+export default {
+    id: '主键ID',
+    user_id: '用户ID',
+    game_id: '游戏ID',
+    channel_id: '渠道ID',
+    amount: '变动金额（元）',
+    real_amount: '实际金额（单位:分或1:1000）',
+    reason: '交易原因（下注、派奖、退款等）',
+    round_id: '局ID/回合ID',
+    transaction_id: '交易唯一编号',
+    req_time: '请求时间',
+    'quick Search Fields': '主键ID',
+}

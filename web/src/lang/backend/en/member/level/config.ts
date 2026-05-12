@@ -1,0 +1,16 @@
+export default {
+    id: 'id',
+    name: 'name',
+    level: 'level',
+    recharge_requirement: 'recharge_requirement',
+    withdraw_limit: 'withdraw_limit',
+    daily_withdraw_times: 'daily_withdraw_times',
+    withdraw_fee_percent: 'withdraw_fee_percent',
+    bonus_percent: 'bonus_percent',
+    upgrade_reward: 'upgrade_reward',
+    weekly_reward: 'weekly_reward',
+    monthly_reward: 'monthly_reward',
+    create_time: 'create_time',
+    update_time: 'update_time',
+    'quick Search Fields': 'id',
+}

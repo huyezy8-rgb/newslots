@@ -1,0 +1,20 @@
+<?php
+return [
+    'Recharge config not exist' => 'Recharge config not exist',
+    'Get recharge config success' => 'Get recharge config success',
+    'Please input recharge activity' => 'Please input recharge activity',
+    'Recharge amount error' => 'Recharge amount error',
+    'Payment method param error' => 'Payment method param error',
+    'Please select payment method' => 'Please select payment method',
+    'This level already recharged' => 'This level already recharged',
+    'Please complete previous level activity' => 'Please complete previous level activity',
+    'Activity participation failed, please notify admin to check' => 'Activity participation failed, please notify admin to check',
+    'This level today already recharged' => 'This level today already recharged',
+    'Not meet participation activity conditions' => 'Not meet participation activity conditions',
+    'Already participate in this activity or other activities cannot be repeated' => 'Already participate in this activity or other activities cannot be repeated',
+    'Modify daily recharge activity status error' => 'Modify daily recharge activity status error',
+    'Create order failed' => 'Create order failed',
+    'Create success' => 'Create success',
+    'Get bank list success' => 'Get bank list success',
+    'Get bank list failed' => 'Get bank list failed',
+]; 

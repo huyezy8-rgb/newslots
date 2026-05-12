@@ -1,0 +1,1 @@
+const t={channel_ids:"展示渠道",channel__name:"渠道名字",title:"Banner标题",content:"内容",image:"Banner图片路径",jump_type:"跳转类型","jump_type 0":"活动","jump_type 1":"外部链接",link:"跳转链接",activity:"活动标识",sort:"排序权重",status:"状态","status 0":"禁用","status 1":"启用",start_time:"开始时间",end_time:"结束时间",remark:"备注",create_time:"创建时间",update_time:"更新时间","quick Search Fields":"id"};export{t as default};

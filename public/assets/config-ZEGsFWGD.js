@@ -1,0 +1,1 @@
+const e={id:"主键ID",name:"名称,例如V0",level:"会员等级",recharge_requirement:"充值要求",withdraw_limit:"提款限制",daily_withdraw_times:"每日提款次数",withdraw_fee_percent:"提款手续费百分比",bonus_percent:"奖金百分比",upgrade_reward:"升级奖励",weekly_reward:"周奖励",monthly_reward:"月奖励",create_time:"创建时间",update_time:"修改时间","quick Search Fields":"主键ID"};export{e as default};
