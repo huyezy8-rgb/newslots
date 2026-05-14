@@ -107,11 +107,19 @@ class PddService
         }
             
         if (!$progress) {
-            // 仅首次创建赠送系统配置 pdd_init，后续新进度从 0 开始
+            // 仅首次创建赠送 23 元，后续新进度从 0 开始
             $hasAny = Db::name('pdd_progress')->where('user_id', $userId)->find();
-            $initRewardConfigured = (float)(get_sys_config('pdd_init') ?? 23.00);
-            $initReward = $hasAny ? 0.00 : $initRewardConfigured;
+            
+            if ($hasAny) {
+                $initReward = 0.00;
+            } else {
+                $min = (float)get_sys_config('pdd_init_min');
+                $max = (float)get_sys_config('pdd_init_max');
+                $initReward = round($min + mt_rand(0, 10000) / 10000 * ($max - $min), 2);
+            }
+       
 
+            
             $id = Db::name('pdd_progress')->insertGetId([
                 'user_id'       => $userId,
                 'group_id'      => 0, // 暂时设为0，后续会创建对应的group
