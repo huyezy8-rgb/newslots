@@ -21,6 +21,7 @@ class LeaderboardReward extends Command
             ->addArgument('type', null, '排行榜类型: daily/weekly/monthly', 'daily');
     }
 
+    
     protected function execute(Input $input, Output $output)
     {
         // 确保时区设置正确（命令行脚本需要手动设置时区）
