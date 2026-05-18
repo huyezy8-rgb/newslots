@@ -1068,33 +1068,34 @@ class Notify
         // 触发完事件后，清空队列
         $this->eventQueue = [];
     }
-}
-public function succuspay()
-{
-    $data = $this->request->post();
 
-    file_put_contents(runtime_path() . 'succuspay_notify.txt',
-        date('Y-m-d H:i:s') . PHP_EOL .
-        json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL . PHP_EOL,
-        FILE_APPEND
-    );
+    public function succuspay()
+    {
+        $data = request()->post();
 
-    if (empty($data['mchOrderNo']) || empty($data['state'])) {
-        echo 'fail';
+        file_put_contents(runtime_path() . 'succuspay_notify.txt',
+            date('Y-m-d H:i:s') . PHP_EOL .
+            json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL . PHP_EOL,
+            FILE_APPEND
+        );
+
+        if (empty($data['mchOrderNo']) || empty($data['state'])) {
+            echo 'fail';
+            exit;
+        }
+
+        // state=2 表示支付成功
+        if (intval($data['state']) === 2) {
+            Db::name('recharge_orders')
+                ->where('order_no', $data['mchOrderNo'])
+                ->where('pay_status', 0)
+                ->update([
+                    'pay_status' => 1,
+                    'updated_at' => time()
+                ]);
+        }
+
+        echo 'success';
         exit;
     }
-
-    // state=2 表示支付成功
-    if (intval($data['state']) === 2) {
-        Db::name('recharge_orders')
-            ->where('order_no', $data['mchOrderNo'])
-            ->where('pay_status', 0)
-            ->update([
-                'pay_status' => 1,
-                'updated_at' => time()
-            ]);
-    }
-
-    echo 'success';
-    exit;
 }

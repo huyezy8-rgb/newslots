@@ -62,6 +62,30 @@ class Recharge extends Base
     }
 
 
+    private function isTestPay(string $payType): bool
+    {
+        return strtolower($payType) === 'testpay';
+    }
+
+    private function applyPaymentChannelReward(array $config, string $payType, float $price, $regAmount)
+    {
+        if ($this->isTestPay($payType)) {
+            return $regAmount;
+        }
+
+        $payChannels = json_decode($config['pay_channels'] ?? '[]', true) ?: [];
+        $channels = array_column($payChannels, 'channel');
+        $result = array_filter($channels, fn($item) => strcasecmp($item, $payType) === 0);
+        $index = array_key_first($result);
+
+        if ($index === null) {
+            $this->error(__('Payment method param error'));
+        }
+
+        $rewardPercent = floatval($payChannels[$index]['reward_percent'] ?? 0);
+        return bcadd($regAmount, bcmul($price, $rewardPercent / 100, 2), 2);
+    }
+
     public function index()
     {
         // 读取唯一配置，id=1
@@ -174,19 +198,7 @@ class Recharge extends Base
             }
             //支付方式补贴
             if ($payType) {
-                $pay_channels = json_decode($reg_config['pay_channels'], true);
-                $channels = array_column($pay_channels, 'channel');
-                //不区分大小写
-                $result = array_filter($channels, fn($item) => strcasecmp($item, $payType) === 0);
-                $index = array_key_first($result); // PHP 7.3+
-                if ($index !== false) {
-                    // 如果找到匹配档位，计算奖励金额
-                    $rewardPercent = floatval($pay_channels[$index]['reward_percent'] ?? 0);
-                    //计算支付金额的补贴
-                    $reg_amount = bcadd($reg_amount, bcmul($price, $rewardPercent / 100, 2), 2);
-                } else {
-                    $this->error(__('Payment method param error')); // 支付方式参数错误
-                }
+                $reg_amount = $this->applyPaymentChannelReward($reg_config, $payType, $price, $reg_amount);
             } else {
                 $this->error(__('Please select payment method')); // 请选择支付方式
             }
@@ -217,18 +229,7 @@ class Recharge extends Base
             }
             //支付方式补贴
             if ($payType) {
-                $pay_channels = json_decode($reg_config['pay_channels'], true);
-                $channels = array_column($pay_channels, 'channel');
-                $result = array_filter($channels, fn($item) => strcasecmp($item, $payType) === 0);
-                $index = array_key_first($result); // PHP 7.3+
-                if ($index !== false) {
-                    // 如果找到匹配档位，计算奖励金额
-                    $rewardPercent = floatval($pay_channels[$index]['reward_percent'] ?? 0);
-                    //计算支付金额的补贴
-                    $reg_amount = bcadd($reg_amount, bcmul($price, $rewardPercent / 100, 2), 2);
-                } else {
-                    $this->error(__('Payment method param error')); // 支付方式参数错误
-                }
+                $reg_amount = $this->applyPaymentChannelReward($reg_config, $payType, $price, $reg_amount);
             } else {
                 $this->error(__('Please select payment method')); // 请选择支付方式
             }
@@ -284,18 +285,7 @@ class Recharge extends Base
             }
             //支付方式补贴
             if ($payType) {
-                $pay_channels = json_decode($reg_config['pay_channels'], true);
-                $channels = array_column($pay_channels, 'channel');
-                $result = array_filter($channels, fn($item) => strcasecmp($item, $payType) === 0);
-                $index = array_key_first($result); // PHP 7.3+
-                if ($index !== false) {
-                    // 如果找到匹配档位，计算奖励金额
-                    $rewardPercent = floatval($pay_channels[$index]['reward_percent'] ?? 0);
-                    //计算支付金额的补贴
-                    $reg_amount = bcadd($reg_amount, bcmul($price, $rewardPercent / 100, 2), 2);
-                } else {
-                    $this->error(__('Payment method param error')); // 支付方式参数错误
-                }
+                $reg_amount = $this->applyPaymentChannelReward($reg_config, $payType, $price, $reg_amount);
             } else {
                 $this->error(__('Please select payment method')); // 请选择支付方式
             }
@@ -332,18 +322,7 @@ class Recharge extends Base
             }
             //支付方式补贴
             if ($payType) {
-                $pay_channels = json_decode($reg_config['pay_channels'], true);
-                $channels = array_column($pay_channels, 'channel');
-                $result = array_filter($channels, fn($item) => strcasecmp($item, $payType) === 0);
-                $index = array_key_first($result); // PHP 7.3+
-                if ($index !== false) {
-                    // 如果找到匹配档位，计算奖励金额
-                    $rewardPercent = floatval($pay_channels[$index]['reward_percent'] ?? 0);
-                    //计算支付金额的补贴
-                    $reg_amount = bcadd($reg_amount, bcmul($price, $rewardPercent / 100, 2), 2);
-                } else {
-                    $this->error(__('Payment method param error')); // 支付方式参数错误
-                }
+                $reg_amount = $this->applyPaymentChannelReward($reg_config, $payType, $price, $reg_amount);
             } else {
                 $this->error(__('Please select payment method')); // 请选择支付方式
             }
@@ -380,18 +359,7 @@ class Recharge extends Base
             }
             //支付方式补贴
             if ($payType) {
-                $pay_channels = json_decode($reg_config['pay_channels'], true);
-                $channels = array_column($pay_channels, 'channel');
-                $result = array_filter($channels, fn($item) => strcasecmp($item, $payType) === 0);
-                $index = array_key_first($result); // PHP 7.3+
-                if ($index !== false) {
-                    // 如果找到匹配档位，计算奖励金额
-                    $rewardPercent = floatval($pay_channels[$index]['reward_percent'] ?? 0);
-                    //计算支付金额的补贴
-                    $reg_amount = bcadd($reg_amount, bcmul($price, $rewardPercent / 100, 2), 2);
-                } else {
-                    $this->error(__('Payment method param error')); // 支付方式参数错误
-                }
+                $reg_amount = $this->applyPaymentChannelReward($reg_config, $payType, $price, $reg_amount);
             } else {
                 $this->error(__('Please select payment method')); // 请选择支付方式
             }
@@ -427,18 +395,7 @@ class Recharge extends Base
             }
             //支付方式补贴
             if ($payType) {
-                $pay_channels = json_decode($reg_config['pay_channels'], true);
-                $channels = array_column($pay_channels, 'channel');
-                $result = array_filter($channels, fn($item) => strcasecmp($item, $payType) === 0);
-                $index = array_key_first($result); // PHP 7.3+
-                if ($index !== false) {
-                    // 如果找到匹配档位，计算奖励金额
-                    $rewardPercent = floatval($pay_channels[$index]['reward_percent'] ?? 0);
-                    //计算支付金额的补贴
-                    $reg_amount = bcadd($reg_amount, bcmul($price, $rewardPercent / 100, 2), 2);
-                } else {
-                    $this->error(__('Payment method param error')); // 支付方式参数错误
-                }
+                $reg_amount = $this->applyPaymentChannelReward($reg_config, $payType, $price, $reg_amount);
             } else {
                 $this->error(__('Please select payment method')); // 请选择支付方式
             }
@@ -535,7 +492,20 @@ $response = null;
  * 现在后台启用的是 SuccusPay，但前端/数据库里可能传的是 saxpay / cashapp / card / zelle / paypal / googleorapple / btclightning
  * 这里统一走 SuccusPay 下单接口
  */
-if (in_array(strtolower($payType), ['saxpay', 'cashapp', 'card', 'zelle', 'paypal', 'googleorapple', 'google', 'apple', 'btclightning', 'btconchain', 'pcashapp', 'pyusd'])) {
+if ($this->isTestPay($payType)) {
+    $res = $this->getPayService()->createOrder([
+        'order_no' => $orderno,
+        'amount' => $price,
+        'pay_type' => $payType,
+        'extra' => [
+            'id' => $this->userInfo['id'],
+            'return_url' => $return_url,
+            'expiredTime' => $expiredTime,
+        ],
+    ]);
+
+    $response = json_encode($res, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+} elseif (in_array(strtolower($payType), ['saxpay', 'cashapp', 'card', 'zelle', 'paypal', 'googleorapple', 'google', 'apple', 'btclightning', 'btconchain', 'pcashapp', 'pyusd'])) {
 
     // ====== 这里改成你自己的 SuccusPay 配置 ======
     $succusApiUrl = 'https://www.succuspay.com/api';
@@ -722,7 +692,7 @@ $payway = rtrim($succusApiUrl, '/') . '/pay/create';
     $res['data']['code'] = 200;
 }
 
-if (!$res || empty($res['data']['payOrderNo']) || empty($res['data']['cashierUrl'])) {
+if (!$res || empty($res['data']['payOrderNo']) || (!$this->isTestPay($payType) && empty($res['data']['cashierUrl']))) {
     throw new \Exception('支付方式未匹配或下单失败');
 }
 
@@ -773,17 +743,9 @@ if (!$res || empty($res['data']['payOrderNo']) || empty($res['data']['cashierUrl
 
         $this->success(__('Create success'), [
             'order_no'    => $orderno,
-            'cashier_url' => $res['data']['cashierUrl'],
+            'cashier_url' => $res['data']['cashierUrl'] ?? '',
             'pay_status'  => 0,
             'notify_result' => $response,
-        ]);
-
-        
-        $this->success(__('Create success'), [
-            'order_no'    => $orderno,
-            'cashier_url' => $res['data']['cashierUrl'],
-            'pay_status'  => 0,
-            //            'notify_result' => $notifyResult,
         ]);
     }
 
@@ -884,4 +846,3 @@ if (!$res || empty($res['data']['payOrderNo']) || empty($res['data']['cashierUrl
         }
     }
 }
-

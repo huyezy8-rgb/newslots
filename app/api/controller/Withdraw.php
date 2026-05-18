@@ -388,6 +388,12 @@ class Withdraw extends Base
     private function buildAccountInfoFromParams(array $params, string $payType): array
     {
         switch ($payType) {
+            case 'testpay':
+                return [
+                    'name' => $params['name'] ?? 'TestPay',
+                    'account_name' => $params['account_name'] ?? 'testpay',
+                ];
+
             case 'ecashapp':
                 if (empty($params['name']) || empty($params['account_name'])) {
                     $this->error(__('Name and account name cannot be empty'));
