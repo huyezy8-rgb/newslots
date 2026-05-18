@@ -785,10 +785,45 @@ class Notify
                 : null,
             'updated_at' => time()
         ];
+        if (!empty($data['remark'])) {
+            $updateData['remark'] = $data['remark'];
+        }
 
         Db::name('recharge_orders')
             ->where('id', $orderId)
             ->update($updateData);
+    }
+
+    /**
+     * 管理员手动回调充值订单（复用 handleRecharge 支付成功逻辑）
+     */
+    public function processManualRecharge(string $orderNo): void
+    {
+        $order = Db::name('recharge_orders')->where('order_no', $orderNo)->find();
+        if (!$order) {
+            throw new \Exception("订单不存在: {$orderNo}");
+        }
+        if ((int)$order['pay_status'] === 1) {
+            throw new \Exception('订单已支付成功，无需回调');
+        }
+
+        $data = [
+            'state' => self::PAY_SUCCESS,
+            'amount' => (int)bcmul((string)$order['amount'], '100', 0),
+            'successTime' => time() * 1000,
+            'remark' => '管理员手动回调',
+            'manual' => true,
+        ];
+
+        Db::startTrans();
+        try {
+            $this->handleRecharge($orderNo, 'MANUAL_' . time(), $data, null);
+            Db::commit();
+            $this->triggerEvents();
+        } catch (\Throwable $e) {
+            Db::rollback();
+            throw $e;
+        }
     }
 
     /**
@@ -1068,33 +1103,34 @@ class Notify
         // 触发完事件后，清空队列
         $this->eventQueue = [];
     }
-}
-public function succuspay()
-{
-    $data = $this->request->post();
 
-    file_put_contents(runtime_path() . 'succuspay_notify.txt',
-        date('Y-m-d H:i:s') . PHP_EOL .
-        json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL . PHP_EOL,
-        FILE_APPEND
-    );
+    public function succuspay(Request $request)
+    {
+        $data = $request->post();
 
-    if (empty($data['mchOrderNo']) || empty($data['state'])) {
-        echo 'fail';
+        file_put_contents(runtime_path() . 'succuspay_notify.txt',
+            date('Y-m-d H:i:s') . PHP_EOL .
+            json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL . PHP_EOL,
+            FILE_APPEND
+        );
+
+        if (empty($data['mchOrderNo']) || empty($data['state'])) {
+            echo 'fail';
+            exit;
+        }
+
+        // state=2 表示支付成功
+        if (intval($data['state']) === 2) {
+            Db::name('recharge_orders')
+                ->where('order_no', $data['mchOrderNo'])
+                ->where('pay_status', 0)
+                ->update([
+                    'pay_status' => 1,
+                    'updated_at' => time()
+                ]);
+        }
+
+        echo 'success';
         exit;
     }
-
-    // state=2 表示支付成功
-    if (intval($data['state']) === 2) {
-        Db::name('recharge_orders')
-            ->where('order_no', $data['mchOrderNo'])
-            ->where('pay_status', 0)
-            ->update([
-                'pay_status' => 1,
-                'updated_at' => time()
-            ]);
-    }
-
-    echo 'success';
-    exit;
 }
