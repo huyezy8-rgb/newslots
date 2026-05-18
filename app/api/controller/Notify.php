@@ -785,10 +785,45 @@ class Notify
                 : null,
             'updated_at' => time()
         ];
+        if (!empty($data['remark'])) {
+            $updateData['remark'] = $data['remark'];
+        }
 
         Db::name('recharge_orders')
             ->where('id', $orderId)
             ->update($updateData);
+    }
+
+    /**
+     * 管理员手动回调充值订单（复用 handleRecharge 支付成功逻辑）
+     */
+    public function processManualRecharge(string $orderNo): void
+    {
+        $order = Db::name('recharge_orders')->where('order_no', $orderNo)->find();
+        if (!$order) {
+            throw new \Exception("订单不存在: {$orderNo}");
+        }
+        if ((int)$order['pay_status'] === 1) {
+            throw new \Exception('订单已支付成功，无需回调');
+        }
+
+        $data = [
+            'state' => self::PAY_SUCCESS,
+            'amount' => (int)bcmul((string)$order['amount'], '100', 0),
+            'successTime' => time() * 1000,
+            'remark' => '管理员手动回调',
+            'manual' => true,
+        ];
+
+        Db::startTrans();
+        try {
+            $this->handleRecharge($orderNo, 'MANUAL_' . time(), $data, null);
+            Db::commit();
+            $this->triggerEvents();
+        } catch (\Throwable $e) {
+            Db::rollback();
+            throw $e;
+        }
     }
 
     /**
@@ -1069,9 +1104,9 @@ class Notify
         $this->eventQueue = [];
     }
 
-    public function succuspay()
+    public function succuspay(Request $request)
     {
-        $data = request()->post();
+        $data = $request->post();
 
         file_put_contents(runtime_path() . 'succuspay_notify.txt',
             date('Y-m-d H:i:s') . PHP_EOL .
