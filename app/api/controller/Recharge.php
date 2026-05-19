@@ -13,6 +13,7 @@ use app\common\model\recharge\Config;
 use app\common\model\recharge\Orders;
 use app\common\service\PayGatewayService;
 use app\common\service\ChannelInfoService;
+use app\common\service\TestPaymentCallbackService;
 use app\Request;
 use ba\Exception;
 use ba\PaymentHelper;
@@ -84,6 +85,21 @@ class Recharge extends Base
 
         $rewardPercent = floatval($payChannels[$index]['reward_percent'] ?? 0);
         return bcadd($regAmount, bcmul($price, $rewardPercent / 100, 2), 2);
+    }
+
+    private function buildTestPayCashierUrl(string $orderNo, float $amount, int $expiredAt, string $returnUrl): string
+    {
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'] ?? '';
+        $baseUrl = $host ? "{$scheme}://{$host}" : '';
+
+        return $baseUrl . '/testpay/cashier.html?' . http_build_query([
+            'order_no' => $orderNo,
+            'amount' => number_format($amount, 2, '.', ''),
+            'expired_at' => $expiredAt,
+            'token' => $this->userInfo['token'] ?? '',
+            'return_url' => $returnUrl,
+        ]);
     }
 
     public function index()
@@ -504,6 +520,7 @@ if ($this->isTestPay($payType)) {
         ],
     ]);
 
+    $res['data']['cashierUrl'] = $this->buildTestPayCashierUrl($orderno, $price, time() + $expiredTime, $return_url);
     $response = json_encode($res, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 } elseif (in_array(strtolower($payType), ['saxpay', 'cashapp', 'card', 'zelle', 'paypal', 'googleorapple', 'google', 'apple', 'btclightning', 'btconchain', 'pcashapp', 'pyusd'])) {
 
@@ -769,8 +786,60 @@ if (!$res || empty($res['data']['payOrderNo']) || (!$this->isTestPay($payType) &
     }
 
     /**
-     * 获取FiatPay银行列表/银行代码
-     * 调用PayGatewayService统一处理
+     * Manually finish a TestPay recharge order from the client.
+     */
+    public function testpayManual(Request $request)
+    {
+        $orderNo = trim((string)$request->param('order_no', ''));
+        $status = strtolower(trim((string)$request->param('status', '')));
+        $allowedStatuses = ['success', 'cancel', 'fail'];
+
+        if ($orderNo === '') {
+            $this->error(__('Please input order no'));
+        }
+
+        if (!in_array($status, $allowedStatuses, true)) {
+            $this->error(__('Payment status param error'));
+        }
+
+        $order = Db::name('recharge_orders')
+            ->where('order_no', $orderNo)
+            ->where('user_id', $this->userInfo['id'])
+            ->find();
+
+        if (!$order) {
+            $this->error(__('Order not found'));
+        }
+
+        if (!$this->isTestPay((string)$order['pay_type'])) {
+            $this->error(__('Payment method param error'));
+        }
+
+        if ((int)$order['pay_status'] !== 0) {
+            $this->error(__('Order already processed'));
+        }
+
+        $testPaymentCallbackService = new TestPaymentCallbackService();
+
+        try {
+            if ($status === 'success') {
+                $payStatus = $testPaymentCallbackService->processPendingRecharge($order, $status, $request);
+            } else {
+                $payStatus = $testPaymentCallbackService->markRechargeTerminal($order, $status);
+            }
+        } catch (\Throwable $e) {
+            $this->error(__('Payment callback failed'), $e->getMessage());
+        }
+
+        $this->success(__('Operate success'), [
+            'order_no' => $orderNo,
+            'pay_status' => $payStatus,
+            'testpay_status' => $status,
+        ]);
+    }
+
+    /**
+     * Get FiatPay bank list.
      */
     public function getFiatPayBankList()
     {

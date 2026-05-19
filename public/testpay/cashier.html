@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+    <title>TestPay Cashier</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: #fff;
+            color: #1f2937;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .page {
+            width: 100%;
+            max-width: 390px;
+            min-height: 100vh;
+            margin: 0 auto;
+            padding: 26px 10px 40px;
+            position: relative;
+        }
+
+        .back {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            width: 31px;
+            height: 31px;
+            border: 0;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.42);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .back::before {
+            content: "";
+            width: 10px;
+            height: 10px;
+            border-left: 3px solid currentColor;
+            border-bottom: 3px solid currentColor;
+            transform: rotate(45deg);
+            margin-left: 4px;
+        }
+
+        .summary {
+            border-radius: 5px;
+            background: #fff;
+            box-shadow: 0 2px 14px rgba(15, 23, 42, 0.09);
+            padding: 8px 12px 15px;
+            min-height: 116px;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 118px minmax(0, 1fr);
+            align-items: center;
+            gap: 12px;
+            min-height: 32px;
+        }
+
+        .label {
+            color: #8a8a8a;
+            font-size: 18px;
+            line-height: 1.2;
+            white-space: nowrap;
+        }
+
+        .value {
+            min-width: 0;
+            color: #111;
+            font-size: 18px;
+            line-height: 1.2;
+            text-align: right;
+            overflow-wrap: anywhere;
+        }
+
+        .order-no {
+            font-size: 15px;
+        }
+
+        .amount {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .time {
+            color: #f00;
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .divider {
+            margin: 21px 0 40px;
+            border-top: 2px dashed #e1e1e1;
+        }
+
+        .panel {
+            width: calc(100% - 40px);
+            margin: 0 auto;
+            border-radius: 4px;
+            background: #fff;
+            box-shadow: 0 3px 18px rgba(15, 23, 42, 0.10);
+            padding: 20px 12px;
+        }
+
+        .hint {
+            margin: 0 0 20px;
+            color: #2f455c;
+            font-size: 16px;
+            line-height: 1.2;
+        }
+
+        .actions {
+            display: grid;
+            gap: 20px;
+        }
+
+        .action {
+            height: 44px;
+            border: 1px solid #2389f2;
+            border-radius: 4px;
+            background: #2389f2;
+            color: #fff;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .action.secondary {
+            background: #fff;
+            color: #176cff;
+        }
+
+        .action:disabled {
+            cursor: not-allowed;
+            opacity: 0.64;
+        }
+
+        .message {
+            display: none;
+            margin-top: 16px;
+            padding: 10px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            line-height: 1.35;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .message.ok {
+            background: #edfdf4;
+            color: #166534;
+        }
+
+        .message.error {
+            background: #fff1f2;
+            color: #b91c1c;
+        }
+    </style>
+</head>
+<body>
+<main class="page">
+    <button class="back" type="button" aria-label="Back"></button>
+
+    <section class="summary">
+        <div class="row">
+            <div class="label">Order No.</div>
+            <div class="value order-no" id="orderNo">-</div>
+        </div>
+        <div class="row">
+            <div class="label">Order Amount</div>
+            <div class="value amount" id="amount">$0.00</div>
+        </div>
+        <div class="row">
+            <div class="label">Remaining time</div>
+            <div class="value time" id="remaining">00:00:00:000</div>
+        </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <section class="panel">
+        <p class="hint">This is a sandbox page, pay success or pay failed</p>
+        <div class="actions">
+            <button class="action" type="button" data-status="success">SUCCESS</button>
+            <button class="action" type="button" data-status="cancel">DISPUTE</button>
+            <button class="action secondary" type="button" data-status="fail">FAIL</button>
+        </div>
+        <div class="message" id="message"></div>
+    </section>
+</main>
+
+<script>
+    const params = new URLSearchParams(window.location.search);
+    const orderNo = params.get('order_no') || '';
+    const amount = params.get('amount') || '0.00';
+    const expiredAt = Number(params.get('expired_at') || 0) * 1000;
+    const token = params.get('token') || localStorage.getItem('token') || '';
+    const returnUrl = params.get('return_url') || '';
+    const orderEl = document.getElementById('orderNo');
+    const amountEl = document.getElementById('amount');
+    const remainingEl = document.getElementById('remaining');
+    const messageEl = document.getElementById('message');
+    const buttons = Array.from(document.querySelectorAll('.action'));
+
+    orderEl.textContent = orderNo || '-';
+    amountEl.textContent = '$' + Number(amount || 0).toFixed(2);
+
+    function formatRemaining(ms) {
+        const safeMs = Math.max(0, ms);
+        const hours = Math.floor(safeMs / 3600000);
+        const minutes = Math.floor((safeMs % 3600000) / 60000);
+        const seconds = Math.floor((safeMs % 60000) / 1000);
+        const millis = Math.floor(safeMs % 1000);
+        return [hours, minutes, seconds].map((value) => String(value).padStart(2, '0')).join(':') + ':' + String(millis).padStart(3, '0');
+    }
+
+    function tick() {
+        if (!expiredAt) {
+            remainingEl.textContent = '00:00:00:000';
+            return;
+        }
+        const left = expiredAt - Date.now();
+        remainingEl.textContent = formatRemaining(left);
+        if (left <= 0) {
+            buttons.forEach((button) => button.disabled = true);
+        }
+    }
+
+    function showMessage(text, type) {
+        messageEl.textContent = text;
+        messageEl.className = 'message show ' + type;
+    }
+
+    function setLoading(loading) {
+        buttons.forEach((button) => button.disabled = loading);
+    }
+
+    async function submitStatus(status) {
+        if (!orderNo) {
+            showMessage('Missing order number.', 'error');
+            return;
+        }
+        if (!token) {
+            showMessage('Missing auth token.', 'error');
+            return;
+        }
+
+        setLoading(true);
+        showMessage('Processing...', 'ok');
+
+        try {
+            const response = await fetch('/index.php/api/recharge/testpayManual', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token,
+                    'token': token
+                },
+                body: JSON.stringify({ order_no: orderNo, status })
+            });
+            const result = await response.json();
+
+            if (Number(result.code) !== 1) {
+                throw new Error(result.msg || 'Operation failed');
+            }
+
+            showMessage('Payment status updated: ' + status.toUpperCase(), 'ok');
+            if (returnUrl) {
+                setTimeout(() => {
+                    window.location.href = returnUrl;
+                }, 900);
+            }
+        } catch (error) {
+            showMessage(error.message || 'Operation failed', 'error');
+            setLoading(false);
+        }
+    }
+
+    document.querySelector('.back').addEventListener('click', () => {
+        if (returnUrl) {
+            window.location.href = returnUrl;
+            return;
+        }
+        history.back();
+    });
+
+    buttons.forEach((button) => {
+        button.addEventListener('click', () => submitStatus(button.dataset.status));
+    });
+
+    tick();
+    setInterval(tick, 100);
+</script>
+</body>
+</html>

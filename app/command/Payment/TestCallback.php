@@ -148,17 +148,6 @@ class TestCallback extends Command
 
     private function handleRecharge(array $order, string $status, bool $dryRun, Output $output): void
     {
-        $state = $status === 'success' ? Notify::PAY_SUCCESS : 3;
-        $platformOrderNo = $order['platform_order_no'] ?: 'TESTPAY' . $order['order_no'];
-        $data = [
-            'state' => $state,
-            'mchOrderNo' => $order['order_no'],
-            'orderNo' => $platformOrderNo,
-            'amount' => bcmul((string)$order['amount'], '100', 0),
-            'successTime' => time() * 1000,
-            'test_callback_status' => $status,
-        ];
-
         $output->writeln(sprintf(
             'Recharge order %s: pay_status %s -> %s',
             $order['order_no'],
@@ -171,7 +160,7 @@ class TestCallback extends Command
             return;
         }
 
-        (new TestPaymentCallbackService())->process($order['order_no'], $platformOrderNo, $data);
+        (new TestPaymentCallbackService())->processRecharge($order, $status);
         $output->writeln('Callback processed.');
     }
 
