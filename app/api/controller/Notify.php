@@ -49,6 +49,19 @@ class Notify
         return $this->messageService ??= new MessageService();
     }
 
+    protected function toArraySafe($value): array
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+
+        if (is_object($value)) {
+            return get_object_vars($value);
+        }
+
+        return [];
+    }
+
     public function __construct()
     {
 
@@ -365,7 +378,7 @@ class Notify
             $reg_config = rechargeConfigModel::where(['id' => '1'])->find();
             $reward_strategy = $reg_config['reward_strategy'];
             $reward = 0;
-            $reg_config['reward_value'] = get_object_vars($reg_config['reward_value']);
+            $reg_config['reward_value'] = $this->toArraySafe($reg_config['reward_value']);
             if ($reward_strategy == 'fixed') {
                 $reward = $reg_config['reward_value']['fixed'];
             } elseif ($reward_strategy == 'percent') {
@@ -466,7 +479,7 @@ class Notify
             $amount_list = $reg_config['amount_list'];
             $amounts = array_column($amount_list, 'amount');
             $index = array_search($order['amount'], $amounts);
-            $taskStatus = get_object_vars($task->task_status);
+            $taskStatus = $this->toArraySafe($task->task_status);
             $taskStatus[$index] = 2;
             if (count(array_filter($taskStatus, fn($v) => $v == 2)) == count($taskStatus)) {
                 $task->receive_status = 2;
@@ -568,7 +581,7 @@ class Notify
             $amount_list = $reg_config['amount_list'];
             $amounts = array_column($amount_list, 'amount');
             $index = array_search($order['amount'], $amounts);
-            $taskStatus = get_object_vars($task->task_status);
+            $taskStatus = $this->toArraySafe($task->task_status);
             $taskStatus[$index] = 2;
             if (count(array_filter($taskStatus, fn($v) => $v == 2)) == count($taskStatus)) {
                 $task->receive_status = 1;
@@ -586,7 +599,7 @@ class Notify
 
                 $reward_strategy = $reg_config['reward_strategy'];
                 $reward = 0;
-                $reg_config['reward_value'] = get_object_vars($reg_config['reward_value']);
+                $reg_config['reward_value'] = $this->toArraySafe($reg_config['reward_value']);
                 if ($reward_strategy == 'fixed') {
                     $reward = $reg_config['reward_value']['fixed'];
                 } elseif ($reward_strategy == 'percent') {
@@ -624,7 +637,7 @@ class Notify
                             'status' => 0,
                         ];
                     },
-                    get_object_vars($reg_config['day_reward_percent'])
+                    $this->toArraySafe($reg_config['day_reward_percent'])
                 );
 
                 $data = [
