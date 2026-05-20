@@ -35,12 +35,13 @@ class Withdraw extends Base
                 'min_withdraw_limit' => get_sys_config('min_withdraw_limit')??30,
             ];
         }elseif ($typeid === 4) {
+            $exWithdrawStageInfo = ChannelInfoService::getExperienceWithdrawStageInfo((int)$this->userInfo['id']);
             $data = [
                 'ex_withdraw_bet'=> $this->userInfo['ex_withdraw_bet'],
                 'ex_withdraw_fee_percent'=> $level['withdraw_fee_percent']??(get_sys_config('ex_withdraw_fee_percent')??0),
-                'ex_withdraw_bet_base'=> ChannelInfoService::getExperienceWithdrawBetBase(),
                 'ex_withdraw_amount'=> ChannelInfoService::getExperienceWithdrawAmount(),
             ];
+            $data = array_merge($data, $exWithdrawStageInfo);
         }
 
 
@@ -276,7 +277,6 @@ class Withdraw extends Base
         } catch (\Throwable $e) {
             // 忽略异常，走原逻辑
         }
-        $ex_withdraw_bet_base= ChannelInfoService::getExperienceWithdrawBetBase();
         $ex_withdraw_amount= ChannelInfoService::getExperienceWithdrawAmount();
         $experienceGoldLimit = floatval($channel['experience_gold_limit'] ?? 30);
         if ($experienceGoldLimit <= 0) {
@@ -285,10 +285,13 @@ class Withdraw extends Base
         $amount = floatval($params['amount']);
         $typeid = $params['typeid'] ?? 4;
         $walletField = CoinLog::walletType($typeid);
-        $balance = floatval($user['experience_wallet'] ?? 0);
+        $userId = (int)$user['id'];
+        $balance = floatval($user[$walletField] ?? 0);
         
 
         // 检查打码量要求
+        $exWithdrawStageInfo = ChannelInfoService::getExperienceWithdrawStageInfo($userId);
+        $ex_withdraw_bet_base = $exWithdrawStageInfo['ex_withdraw_bet_base'];
         if ($user['ex_withdraw_bet']<$ex_withdraw_bet_base){
             $this->error(__('Turnover not reached'));
         }
@@ -299,6 +302,17 @@ class Withdraw extends Base
         // 免手续费，直接划转固定金额，然后赠送体验金
         Db::startTrans();
         try {
+            $lockedUser = Db::name('account')->lock(true)->where('id', $userId)->find();
+            if (!$lockedUser) {
+                throw new \Exception(__('User not found'));
+            }
+            $exWithdrawStageInfo = ChannelInfoService::getExperienceWithdrawStageInfo($userId);
+            $ex_withdraw_bet_base = $exWithdrawStageInfo['ex_withdraw_bet_base'];
+            if (floatval($lockedUser['ex_withdraw_bet'] ?? 0) < $ex_withdraw_bet_base) {
+                throw new \Exception(__('Turnover not reached'));
+            }
+            $balance = floatval($lockedUser[$walletField] ?? 0);
+            $actualDeductAmount = min($amount, $balance);
             $accountService = new AccountService();
             //大于0才有扣除
             if ($balance > 0) {
@@ -309,10 +323,14 @@ class Withdraw extends Base
             $accountService->increaseBalance($user['id'], $transferAmount, 1, CoinLog::ExWithdraw, __('Experience wallet withdraw transfer in'));
 
             // 扣减打码量门槛
-            Db::name('account')
+            $updated = Db::name('account')
                 ->where('id', $user['id'])
+                ->where('ex_withdraw_bet', '>=', $ex_withdraw_bet_base)
                 ->dec('ex_withdraw_bet',$ex_withdraw_bet_base )
                 ->update();
+            if (!$updated) {
+                throw new \Exception(__('Turnover not reached'));
+            }
 
             // 检查体验金是否归零，如果归零则赠送体验金
             $remainingBalance = $balance - $actualDeductAmount;
@@ -323,6 +341,8 @@ class Withdraw extends Base
             $finalExperienceBalance = $remainingBalance + $giftAmount;
 
             Db::commit();
+
+            $nextExWithdrawStageInfo = ChannelInfoService::getExperienceWithdrawStageInfo($userId);
             
             $msg = __('Withdrawal successful');
 
@@ -335,7 +355,11 @@ class Withdraw extends Base
                     'transferred_amount' => $transferAmount,
                     'gift_amount' => $giftAmount,
                     'remaining_balance' => max(0, $finalExperienceBalance),
-                    'experience_gold_limit' => $experienceGoldLimit
+                    'experience_gold_limit' => $experienceGoldLimit,
+                    'ex_withdraw_bet_base' => $nextExWithdrawStageInfo['ex_withdraw_bet_base'],
+                    'ex_withdraw_bet_base_list' => $nextExWithdrawStageInfo['ex_withdraw_bet_base_list'],
+                    'ex_withdraw_success_count' => $nextExWithdrawStageInfo['ex_withdraw_success_count'],
+                    'ex_withdraw_stage' => $nextExWithdrawStageInfo['ex_withdraw_stage']
                 ]
             ];
         } catch (\Throwable $e) {

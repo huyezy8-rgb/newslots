@@ -286,9 +286,10 @@ class Login extends Api
 //            }
 //        }
 
+        $exWithdrawStageInfo = ChannelInfoService::getExperienceWithdrawStageInfo((int)$account->id);
         $channelDetailInfo = $channelInfo->toArray();
         $channelDetailInfo["activity"] = array_values($activity);
-        $channelDetailInfo["ex_withdraw_bet_base"] = ChannelInfoService::getExperienceWithdrawBetBase();
+        $channelDetailInfo = array_merge($channelDetailInfo, $exWithdrawStageInfo);
         $channelDetailInfo["ex_withdraw_amount"] = ChannelInfoService::getExperienceWithdrawAmount();
 
 

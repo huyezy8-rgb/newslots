@@ -616,7 +616,8 @@ $this->success(__('Bind mobile successfully'), [
             $userInfo->id)
             ->whereDay('rescue_date', $today)
             ->count();
-       $this->success("", [
+        $exWithdrawStageInfo = ChannelInfoService::getExperienceWithdrawStageInfo((int)$this->userInfo->id);
+       $this->success("", array_merge([
     "id" => $this->userInfo->id,
     "user_id" => $this->userInfo->id,
     "uid" => $this->userInfo->id,
@@ -638,9 +639,8 @@ $this->success(__('Bind mobile successfully'), [
              "pwa_status" => $pwa_status,
              'sms_switch' => get_sys_config('is_switch'),
              "rescue_funds_received_count" => $rescue_funds_received_count,
-            "ex_withdraw_bet_base" => ChannelInfoService::getExperienceWithdrawBetBase(),
             "ex_withdraw_amount"  => ChannelInfoService::getExperienceWithdrawAmount(),
-        ]);
+        ], $exWithdrawStageInfo));
     }
 
     /**

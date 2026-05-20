@@ -9,6 +9,7 @@ use app\common\model\activity\FirstDeposit270;
 use app\common\model\activity\daygold\User as DaygoldUser;
 use app\common\model\Banner;
 use app\common\model\ChannelList;
+use think\facade\Db;
 
 
 class ChannelInfoService
@@ -25,7 +26,72 @@ class ChannelInfoService
 
     public static function getExperienceWithdrawBetBase(): int|float
     {
-        return self::getPositiveNumericSysConfig('ex_withdraw_bet_base', 9000);
+        return self::getExperienceWithdrawBetBaseList()[0];
+    }
+
+    public static function getExperienceWithdrawBetBaseList(): array
+    {
+        $value = get_sys_config('ex_withdraw_bet_base');
+        $values = [];
+
+        if (is_array($value)) {
+            $values = $value;
+        } elseif (is_string($value)) {
+            $value = trim($value);
+            $decoded = json_decode($value, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                $values = $decoded;
+            } else {
+                $values = explode(',', $value);
+            }
+        } elseif (is_numeric($value)) {
+            $values = [$value];
+        }
+
+        $values = array_values(array_filter(array_map(function ($item) {
+            if (!is_numeric($item) || (float)$item <= 0) {
+                return null;
+            }
+
+            return $item + 0;
+        }, $values), fn($item) => $item !== null));
+
+        return $values ?: [9000];
+    }
+
+    public static function getExperienceWithdrawSuccessCount(int $userId): int
+    {
+        if ($userId <= 0) {
+            return 0;
+        }
+
+        return Db::name('account_coin_log')
+            ->where('user_id', $userId)
+            ->where('log_type_id', CoinLog::ExWithdraw)
+            ->where('wallet_type', 1)
+            ->where('num', '>', 0)
+            ->count();
+    }
+
+    public static function getExperienceWithdrawBetBaseForUser(int $userId): int|float
+    {
+        $info = self::getExperienceWithdrawStageInfo($userId);
+
+        return $info['ex_withdraw_bet_base'];
+    }
+
+    public static function getExperienceWithdrawStageInfo(int $userId): array
+    {
+        $list = self::getExperienceWithdrawBetBaseList();
+        $successCount = self::getExperienceWithdrawSuccessCount($userId);
+        $index = min($successCount, count($list) - 1);
+
+        return [
+            'ex_withdraw_bet_base' => $list[$index],
+            'ex_withdraw_bet_base_list' => $list,
+            'ex_withdraw_success_count' => $successCount,
+            'ex_withdraw_stage' => $index + 1,
+        ];
     }
 
     public static function getExperienceWithdrawAmount(): int|float
@@ -182,10 +248,10 @@ class ChannelInfoService
             "Rewards" => $rewardsActivities,
             "Sidebar" => $sidebarActivities
         ];
-        $channelInfo["ex_withdraw_bet_base"] = self::getExperienceWithdrawBetBase();
+        $channelInfo = array_merge($channelInfo->toArray(), self::getExperienceWithdrawStageInfo((int)($account->id ?? 0)));
         $channelInfo["ex_withdraw_amount"] = self::getExperienceWithdrawAmount();
 
         
-        return $channelInfo->toArray();
+        return $channelInfo;
     }
 } 

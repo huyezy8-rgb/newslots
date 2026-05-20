@@ -127,6 +127,7 @@ class Sse extends Base
                     sleep(5);
                     continue;
                 }
+                $exWithdrawStageInfo = ChannelInfoService::getExperienceWithdrawStageInfo((int)$userInfo->id);
                 
                 // 构建用户数据
                 $data = [
@@ -144,12 +145,12 @@ class Sse extends Base
                     "sum_bet" => $userInfo->sum_bet,
                     "ex_withdraw_bet" => $userInfo->ex_withdraw_bet,
                     "withdraw_available" => $userInfo->withdraw_available,
-                    "ex_withdraw_bet_base" => ChannelInfoService::getExperienceWithdrawBetBase(),
                     "ex_withdraw_amount" => ChannelInfoService::getExperienceWithdrawAmount(),
                     "update_time" => $currentTime,
                     "data_source" => "realtime", // 标记为实时数据
                     "cache_status" => "updated" // 缓存状态
                 ];
+                $data = array_merge($data, $exWithdrawStageInfo);
                 
                 // 缓存用户信息，有效期5分钟，使用标签管理
                 Cache::tag(\app\common\model\Account::$cacheTag)->set($cacheKey, $data, 300);
