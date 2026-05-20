@@ -74,21 +74,23 @@ class FirstDeposit270 extends Base
             // 获取上次弹窗时间
             $lastPopup = Cache::get($popupKey);
             $currentTime = time();
+            $countdownSeconds = (int)($config->countdown_seconds ?: 7200);
+            $lastPopupDay = $lastPopup ? date('Y-m-d', (int)$lastPopup) : '';
             
-            // 检查是否可以弹窗（24小时后或从未弹过）
-            $canPopup = !$lastPopup || ($currentTime - $lastPopup >= 86400);
-            
+            // 检查是否可以弹窗（每个自然日或从未弹过）
+            $canPopup = !$lastPopup || $lastPopupDay !== date('Y-m-d', $currentTime);
+
             if ($canPopup) {
                 // 可以弹窗，设置新的弹窗时间和倒计时
                 $startTime = $currentTime;
-                Cache::set($popupKey, $startTime, 86400);      // 控制 24 小时只能弹一次
-                Cache::set($startKey, $startTime, $config->countdown_seconds);       // 设置 2 小时倒计时
-                $endTime = $startTime + 7200; // 2小时倒计时
+                Cache::set($popupKey, $startTime, 86400 * 2);      // 记录最近弹窗日期
+                Cache::set($startKey, $startTime, $countdownSeconds);       // 设置倒计时
+                $endTime = $startTime + $countdownSeconds; // 倒计时
             } else {
-                // 24小时内不能弹窗，检查是否有未过期的倒计时
+                // 当天已弹窗，检查是否有未过期的倒计时
                 $startTime = Cache::get($startKey);
-                if ($startTime && ($currentTime - $startTime) < 7200) {
-                    $endTime = $startTime + 7200; // 继续显示倒计时
+                if ($startTime && ($currentTime - $startTime) < $countdownSeconds) {
+                    $endTime = $startTime + $countdownSeconds; // 继续显示倒计时
                 } else {
                     $endTime = 0; // 倒计时已过期
                 }
