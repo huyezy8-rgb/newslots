@@ -6,6 +6,7 @@ use app\api\enum\CoinLog;
 use app\common\controller\Api;
 use app\common\controller\Frontend;
 use app\common\model\withdraw\Orders;
+use app\common\service\ChannelInfoService;
 use app\common\service\PayGatewayService;
 use app\common\service\AccountService;
 use think\facade\Db;
@@ -37,8 +38,8 @@ class Withdraw extends Base
             $data = [
                 'ex_withdraw_bet'=> $this->userInfo['ex_withdraw_bet'],
                 'ex_withdraw_fee_percent'=> $level['withdraw_fee_percent']??(get_sys_config('ex_withdraw_fee_percent')??0),
-                'ex_withdraw_bet_base'=>get_sys_config('ex_withdraw_bet_base'),
-                'ex_withdraw_amount'=>get_sys_config('ex_withdraw_amount')??30,
+                'ex_withdraw_bet_base'=> ChannelInfoService::getExperienceWithdrawBetBase(),
+                'ex_withdraw_amount'=> ChannelInfoService::getExperienceWithdrawAmount(),
             ];
         }
 
@@ -274,8 +275,8 @@ class Withdraw extends Base
         } catch (\Throwable $e) {
             // 忽略异常，走原逻辑
         }
-        $ex_withdraw_bet_base=get_sys_config('ex_withdraw_bet_base');
-        $ex_withdraw_amount=get_sys_config('ex_withdraw_amount' )??30;
+        $ex_withdraw_bet_base= ChannelInfoService::getExperienceWithdrawBetBase();
+        $ex_withdraw_amount= ChannelInfoService::getExperienceWithdrawAmount();
         $amount = floatval($params['amount']);
         $typeid = $params['typeid'] ?? 4;
         $walletField = CoinLog::walletType($typeid);

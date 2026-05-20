@@ -13,6 +13,26 @@ use app\common\model\ChannelList;
 
 class ChannelInfoService
 {
+    public static function getPositiveNumericSysConfig(string $name, int|float $default): int|float
+    {
+        $value = get_sys_config($name);
+        if ($value === null || $value === '' || !is_numeric($value) || (float)$value <= 0) {
+            return $default;
+        }
+
+        return $value + 0;
+    }
+
+    public static function getExperienceWithdrawBetBase(): int|float
+    {
+        return self::getPositiveNumericSysConfig('ex_withdraw_bet_base', 9000);
+    }
+
+    public static function getExperienceWithdrawAmount(): int|float
+    {
+        return self::getPositiveNumericSysConfig('ex_withdraw_amount', 30);
+    }
+
     /**
      * 断言指定渠道活动是否开启
      * @throws \Exception
@@ -162,8 +182,8 @@ class ChannelInfoService
             "Rewards" => $rewardsActivities,
             "Sidebar" => $sidebarActivities
         ];
-        $channelInfo["ex_withdraw_bet_base"] = get_sys_config("ex_withdraw_bet_base")??9000;
-        $channelInfo["ex_withdraw_amount"] =get_sys_config('ex_withdraw_amount')??30;
+        $channelInfo["ex_withdraw_bet_base"] = self::getExperienceWithdrawBetBase();
+        $channelInfo["ex_withdraw_amount"] = self::getExperienceWithdrawAmount();
 
         
         return $channelInfo->toArray();

@@ -2,6 +2,7 @@
 
 namespace app\api\controller;
 
+use app\common\service\ChannelInfoService;
 use app\common\service\MessageService;
 use think\App;
 use think\facade\Cache;
@@ -143,8 +144,8 @@ class Sse extends Base
                     "sum_bet" => $userInfo->sum_bet,
                     "ex_withdraw_bet" => $userInfo->ex_withdraw_bet,
                     "withdraw_available" => $userInfo->withdraw_available,
-                    "ex_withdraw_bet_base" => get_sys_config("ex_withdraw_bet_base") ?? 9000,
-                    "ex_withdraw_amount" => get_sys_config('ex_withdraw_amount') ?? 30,
+                    "ex_withdraw_bet_base" => ChannelInfoService::getExperienceWithdrawBetBase(),
+                    "ex_withdraw_amount" => ChannelInfoService::getExperienceWithdrawAmount(),
                     "update_time" => $currentTime,
                     "data_source" => "realtime", // 标记为实时数据
                     "cache_status" => "updated" // 缓存状态

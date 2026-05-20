@@ -7,6 +7,7 @@ use app\common\controller\Api;
 use app\common\model\Config;
 
 use app\common\model\SmsVerify;
+use app\common\service\ChannelInfoService;
 use ba\GameHelper;
 use think\facade\Log;
 use think\facade\Request;
@@ -219,7 +220,7 @@ class Login extends Api
         $accountDetailInfo = $accountInfoService->getAccountDetailInfo($account, $isNewUser);
 
         // 渠道信息获取
-        $channelInfoService = new \app\common\service\ChannelInfoService();
+        $channelInfoService = new ChannelInfoService();
         $channelDetailInfo = $channelInfoService->getChannelDetailInfo($account, $channelInfo, $isNewUser);
 
         return [
@@ -287,7 +288,8 @@ class Login extends Api
 
         $channelDetailInfo = $channelInfo->toArray();
         $channelDetailInfo["activity"] = array_values($activity);
-        $channelDetailInfo["ex_withdraw_bet_base"] = get_sys_config("ex_withdraw_bet_base");
+        $channelDetailInfo["ex_withdraw_bet_base"] = ChannelInfoService::getExperienceWithdrawBetBase();
+        $channelDetailInfo["ex_withdraw_amount"] = ChannelInfoService::getExperienceWithdrawAmount();
 
 
 

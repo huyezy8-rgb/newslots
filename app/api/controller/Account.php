@@ -11,6 +11,7 @@ use app\common\model\PddInvitation;
 use app\common\model\PddProgress;
 use app\common\model\SmsVerify;
 use app\common\model\country\Code as CountryCode;
+use app\common\service\ChannelInfoService;
 use think\facade\Db;
 use think\Request;
 
@@ -637,8 +638,8 @@ $this->success(__('Bind mobile successfully'), [
              "pwa_status" => $pwa_status,
              'sms_switch' => get_sys_config('is_switch'),
              "rescue_funds_received_count" => $rescue_funds_received_count,
-            "ex_withdraw_bet_base" => get_sys_config("ex_withdraw_bet_base")??9000,
-            "ex_withdraw_amount"  => get_sys_config('ex_withdraw_amount')??30,
+            "ex_withdraw_bet_base" => ChannelInfoService::getExperienceWithdrawBetBase(),
+            "ex_withdraw_amount"  => ChannelInfoService::getExperienceWithdrawAmount(),
         ]);
     }
 
