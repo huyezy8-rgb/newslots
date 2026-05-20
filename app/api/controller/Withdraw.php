@@ -267,6 +267,7 @@ class Withdraw extends Base
     {
         // 体验钱包划转到充值钱包（免手续费，不创建提现订单）
         // 若渠道关闭双钱包，则禁止体验钱包提现
+        $channel = null;
         try {
             $channel = \app\common\model\ChannelList::withoutField('create_time,update_time')->where('id', $user['channel_id'])->find();
             if ($channel && intval($channel['double_wallet_enabled'] ?? 1) === 0) {
@@ -277,6 +278,10 @@ class Withdraw extends Base
         }
         $ex_withdraw_bet_base= ChannelInfoService::getExperienceWithdrawBetBase();
         $ex_withdraw_amount= ChannelInfoService::getExperienceWithdrawAmount();
+        $experienceGoldLimit = floatval($channel['experience_gold_limit'] ?? 30);
+        if ($experienceGoldLimit <= 0) {
+            $experienceGoldLimit = 30;
+        }
         $amount = floatval($params['amount']);
         $typeid = $params['typeid'] ?? 4;
         $walletField = CoinLog::walletType($typeid);
@@ -311,9 +316,11 @@ class Withdraw extends Base
 
             // 检查体验金是否归零，如果归零则赠送体验金
             $remainingBalance = $balance - $actualDeductAmount;
-            if ($remainingBalance <= 0) {
-                $accountService->increaseBalance($user['id'], $ex_withdraw_amount, 0, CoinLog::ExWithdrawGift, __('Experience wallet withdraw gift'));
+            $giftAmount = max(0, $experienceGoldLimit - $remainingBalance);
+            if ($giftAmount > 0) {
+                $accountService->increaseBalance($user['id'], $giftAmount, 0, CoinLog::ExWithdrawGift, __('Experience wallet withdraw gift'));
             }
+            $finalExperienceBalance = $remainingBalance + $giftAmount;
 
             Db::commit();
             
@@ -326,8 +333,9 @@ class Withdraw extends Base
                 "data" => [
                     'deducted_amount' => $actualDeductAmount,
                     'transferred_amount' => $transferAmount,
-                    'gift_amount' => $remainingBalance <= 0 ? $ex_withdraw_amount : 0,
-                    'remaining_balance' => max(0, $remainingBalance)
+                    'gift_amount' => $giftAmount,
+                    'remaining_balance' => max(0, $finalExperienceBalance),
+                    'experience_gold_limit' => $experienceGoldLimit
                 ]
             ];
         } catch (\Throwable $e) {
