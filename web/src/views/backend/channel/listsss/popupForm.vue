@@ -175,8 +175,33 @@
                     <!-- 渠道活动全量开关（基于 available_activities） -->
                     <el-divider>活动设置</el-divider>
                     <el-card class="activity-section" shadow="never" body-style="padding: 12px;">
-                        
-                        
+                        <div v-if="homePopupOrderItems.length" class="home-popup-sort">
+                            <div class="home-popup-sort-header">
+                                <span>首页弹窗设置</span>
+                            </div>
+                            <div ref="homePopupSortRef" class="home-popup-sort-list">
+                                <div
+                                    v-for="(it, index) in homePopupOrderItems"
+                                    :key="getActivityKey(it)"
+                                    class="home-popup-sort-item"
+                                    :class="{ disabled: !activityConfigs[getActivityKey(it)]?.popup_enabled_home }"
+                                    :data-key="getActivityKey(it)"
+                                >
+                                    <div class="home-popup-sort-drag-area" title="拖动排序">
+                                        <el-icon class="drag-handle"><Rank /></el-icon>
+                                        <span class="order">{{ activityConfigs[getActivityKey(it)]?.popup_enabled_home ? index + 1 : '-' }}</span>
+                                        <div class="content">
+                                            <span class="name">{{ activityOptions[getActivityKey(it)] || getActivityKey(it) }}</span>
+                                            <el-tag size="small" type="info">{{ getActivityKey(it) }}</el-tag>
+                                        </div>
+                                    </div>
+                                    <div class="popup-switch">
+                                        <el-switch v-model="activityConfigs[getActivityKey(it)].popup_enabled_home" active-text="开" inactive-text="关" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div v-if="filteredActivities.length">
                             <div v-for="it in filteredActivities" :key="getActivityKey(it)" class="activity-item">
                                 <div class="activity-header">
@@ -190,21 +215,6 @@
                                     <span class="label">启用</span>
                                     <el-switch v-model="activityConfigs[getActivityKey(it)].enabled" :active-text="t('Enable')" :inactive-text="t('Disable')" />
                                 </div>
-                                <!-- 首页弹窗 控制组 -->
-                                <template v-if="isPopupHomeSupported(it)">
-                                    <div class="activity-field">
-                                        <span class="label">首页弹窗</span>
-                                        <el-switch v-model="activityConfigs[getActivityKey(it)].popup_enabled_home" active-text="Popup" inactive-text="No Popup" />
-                                    </div>
-                                    <div class="activity-field">
-                                        <span class="label">首页弹窗顺序</span>
-                                        <el-input-number v-model="activityConfigs[getActivityKey(it)].popup_order_home" :min="0" :max="999" :step="1" controls-position="right" style="width: 140px;" />
-                                        <el-tooltip content="弹窗显示顺序：0=没有顺序，1-999按数字从小到大排列，0可以重复，其他数字不能重复" placement="top">
-                                            <el-icon style="margin-left: 4px; color: var(--el-text-color-secondary); cursor: help;"><QuestionFilled /></el-icon>
-                                        </el-tooltip>
-                                    </div>
-                                </template>
-                                
                                 <!-- 充值页弹窗 控制组 -->
                                 <template v-if="isPopupRechargeSupported(it)">
                                     <div class="activity-field">
@@ -251,15 +261,15 @@
 
 <script setup lang="ts">
 import type {FormItemRule} from 'element-plus'
-import {ElMessage} from 'element-plus'
-import {inject, reactive, useTemplateRef, onMounted, ref, watch, computed, nextTick} from 'vue'
+import Sortable, { type SortableEvent } from 'sortablejs'
+import {inject, reactive, useTemplateRef, onMounted, onBeforeUnmount, ref, watch, computed, nextTick} from 'vue'
 import {useI18n} from 'vue-i18n'
 import FormItem from '/@/components/formItem/index.vue'
 import {useConfig} from '/@/stores/config'
 import type baTableClass from '/@/utils/baTable'
 import {buildValidatorData} from '/@/utils/validate'
 import request from '/@/utils/axios'
-import { QuestionFilled } from '@element-plus/icons-vue'
+import { QuestionFilled, Rank } from '@element-plus/icons-vue'
 
 const config = useConfig()
 const formRef = useTemplateRef('formRef')
@@ -302,6 +312,9 @@ const activityConfigs = reactive<Record<string, any>>({})
 const availableActivities = ref<any[]>([])
 const activityFilterText = ref('')
 const activityFilterStatus = ref<'all' | 'enabled' | 'disabled'>('all')
+const homePopupSortRef = ref<HTMLElement>()
+const homePopupOrderKeys = ref<string[]>([])
+let homePopupSortable: Sortable | null = null
 const filteredActivities = computed(() => {
     const kw = activityFilterText.value.trim().toLowerCase()
     return availableActivities.value.filter((it: any) => {
@@ -313,18 +326,23 @@ const filteredActivities = computed(() => {
         return matchKw && matchStatus
     })
 })
+const homePopupOrderItems = computed(() => {
+    return homePopupOrderKeys.value
+        .map((key) => availableActivities.value.find((it: any) => getActivityKey(it) === key))
+        .filter(Boolean)
+})
 
 function toggleAll(state: boolean) {
     availableActivities.value.forEach((it: any) => {
         const key = getActivityKey(it)
-        if (!activityConfigs[key]) activityConfigs[key] = { enabled: true, popup_enabled: false, bet_multiplier: 1 }
+        if (!activityConfigs[key]) activityConfigs[key] = createDefaultActivityConfig(it)
         activityConfigs[key].enabled = state
     })
 }
 
 function resetOne(key: string, it: any) {
-    const defMul = Number(it?.option?.bet_multiplier) > 0 ? Number(it.option.bet_multiplier) : 1
-    activityConfigs[key] = { enabled: true, popup_enabled: false, bet_multiplier: defMul }
+    activityConfigs[key] = createDefaultActivityConfig(it)
+    syncHomePopupOrderToConfigs()
 }
 
 function resetAll() {
@@ -332,6 +350,19 @@ function resetAll() {
 }
 
 function getActivityKey(it: any) { return it?.key ?? it?.type }
+
+function createDefaultActivityConfig(it: any) {
+    const defMul = it?.option?.bet_multiplier
+    const betMul = defMul && Number(defMul) > 0 ? Number(defMul) : 1
+    return {
+        enabled: true,
+        popup_enabled_home: false,
+        popup_enabled_recharge: false,
+        popup_order_home: 0,
+        popup_order_recharge: 0,
+        bet_multiplier: betMul,
+    }
+}
 
 function isPopupHomeSupported(it: any): boolean {
     const key = getActivityKey(it)
@@ -349,6 +380,69 @@ function isBetMultiplierSupported(it: any): boolean {
     const key = getActivityKey(it)
     const found = availableActivities.value.find((x: any) => getActivityKey(x) === key)
     return Number(found?.is_bet_multiplier) === 1
+}
+
+function getHomePopupSupportedKeys() {
+    return availableActivities.value.filter((it: any) => isPopupHomeSupported(it)).map((it: any) => getActivityKey(it))
+}
+
+function refreshHomePopupOrderKeys() {
+    const supportedKeys = getHomePopupSupportedKeys()
+    const availableIndex = new Map(supportedKeys.map((key, index) => [key, index]))
+
+    homePopupOrderKeys.value = [...supportedKeys].sort((a, b) => {
+        const orderA = Number(activityConfigs[a]?.popup_order_home) || 0
+        const orderB = Number(activityConfigs[b]?.popup_order_home) || 0
+
+        if (orderA > 0 && orderB > 0) return orderA - orderB
+        if (orderA > 0) return -1
+        if (orderB > 0) return 1
+        return (availableIndex.get(a) ?? 0) - (availableIndex.get(b) ?? 0)
+    })
+    syncHomePopupOrderToConfigs()
+    nextTick(() => initHomePopupSortable())
+}
+
+function syncHomePopupOrderToConfigs() {
+    homePopupOrderKeys.value.forEach((key, index) => {
+        const item = availableActivities.value.find((it: any) => getActivityKey(it) === key)
+        if (!item) return
+        if (!activityConfigs[key]) activityConfigs[key] = createDefaultActivityConfig(item)
+
+        const nextOrder = activityConfigs[key].popup_enabled_home ? index + 1 : 0
+        if (Number(activityConfigs[key].popup_order_home) !== nextOrder) {
+            activityConfigs[key].popup_order_home = nextOrder
+        }
+    })
+}
+
+function moveHomePopupOrder(oldIndex: number, newIndex: number) {
+    const keys = [...homePopupOrderKeys.value]
+    const [moved] = keys.splice(oldIndex, 1)
+    keys.splice(newIndex, 0, moved)
+    homePopupOrderKeys.value = keys
+    syncHomePopupOrderToConfigs()
+    composeActivityPayload()
+}
+
+function initHomePopupSortable() {
+    if (!homePopupSortRef.value || homePopupOrderItems.value.length < 2) {
+        homePopupSortable?.destroy()
+        homePopupSortable = null
+        return
+    }
+    homePopupSortable?.destroy()
+    homePopupSortable = Sortable.create(homePopupSortRef.value, {
+        animation: 180,
+        handle: '.home-popup-sort-drag-area',
+        draggable: '.home-popup-sort-item',
+        ghostClass: 'home-popup-sort-ghost',
+        chosenClass: 'home-popup-sort-chosen',
+        onEnd: (evt: SortableEvent) => {
+            if (evt.oldIndex === undefined || evt.newIndex === undefined || evt.oldIndex === evt.newIndex) return
+            moveHomePopupOrder(evt.oldIndex, evt.newIndex)
+        },
+    })
 }
 
 function ensureDefaults() {
@@ -378,16 +472,7 @@ function initActivityFromModel() {
     if (!raw) {
         availableActivities.value.forEach((it: any) => {
             const key = getActivityKey(it)
-            const defMul = it?.option?.bet_multiplier
-            const betMul = defMul && Number(defMul) > 0 ? Number(defMul) : 1
-            activityConfigs[key] = {
-                enabled: true,
-                popup_enabled_home: false,
-                popup_enabled_recharge: false,
-                popup_order_home: 0,
-                popup_order_recharge: 0,
-                bet_multiplier: betMul,
-            }
+            activityConfigs[key] = createDefaultActivityConfig(it)
         })
         return
     }
@@ -429,11 +514,9 @@ function initActivityFromModel() {
 }
 
 function composeActivityPayload() {
-    console.log('composeActivityPayload called, activityConfigs:', activityConfigs)
     const payload = Object.keys(activityConfigs).map((key) => {
         const config = activityConfigs[key]
         const item = availableActivities.value.find((x: any) => getActivityKey(x) === key)
-        console.log(`Processing ${key}, config:`, config, 'item:', item)
         const out: any = {
             key,
             option: {},
@@ -444,8 +527,7 @@ function composeActivityPayload() {
         if (isBetMultiplierSupported(item)) {
             out.option.bet_multiplier = Number(config?.bet_multiplier) || 1
         }
-        
-        console.log(`Output for ${key}:`, out)
+
         if (isPopupHomeSupported(item)) {
             out.popup_enabled_home = Boolean(config?.popup_enabled_home)
             out.popup_order_home = Number(config?.popup_order_home) || 0
@@ -456,12 +538,12 @@ function composeActivityPayload() {
         }
         return out
     })
-    console.log('Final payload:', payload)
     ;(baTable.form.items as any).activity = JSON.stringify(payload)
     return payload
 }
 
 watch(activityConfigs, () => {
+    syncHomePopupOrderToConfigs()
     composeActivityPayload()
 }, { deep: true, immediate: false })
 
@@ -483,17 +565,9 @@ async function fetchAvailableActivitiesIfNeeded() {
                 if (!(baTable.form.items as any)?.activity) {
                     availableActivities.value.forEach((it: any) => {
                         const key = getActivityKey(it)
-                        const defMul = it?.option?.bet_multiplier
-                        const betMul = defMul && Number(defMul) > 0 ? Number(defMul) : 1
-                        activityConfigs[key] = {
-                            enabled: true,
-                            popup_enabled_home: false,
-                            popup_enabled_recharge: false,
-                            popup_order_home: 0,
-                            popup_order_recharge: 0,
-                            bet_multiplier: betMul,
-                        }
+                        activityConfigs[key] = createDefaultActivityConfig(it)
                     })
+                    refreshHomePopupOrderKeys()
                     composeActivityPayload()
                 }
             }
@@ -511,8 +585,14 @@ onMounted(async () => {
     // 确保在 available_activities 加载完成后初始化
     if (availableActivities.value && availableActivities.value.length > 0) {
         initActivityFromModel()
+        refreshHomePopupOrderKeys()
         composeActivityPayload()
     }
+})
+
+onBeforeUnmount(() => {
+    homePopupSortable?.destroy()
+    homePopupSortable = null
 })
 
 // 等待后端异步注入 row 后再初始化（首次和后续替换时都会触发）
@@ -526,6 +606,7 @@ watch(
             // 确保在下一个 tick 中初始化，让 available_activities 完全加载
             nextTick(() => {
                 initActivityFromModel()
+                refreshHomePopupOrderKeys()
                 composeActivityPayload()
             })
         }
@@ -536,6 +617,127 @@ watch(
 
 <style scoped lang="scss">
 .activity-section {
+  .home-popup-sort {
+    margin-bottom: 14px;
+    padding: 12px;
+    border: 1px solid var(--el-border-color);
+    border-radius: 8px;
+    background: var(--el-fill-color-blank);
+  }
+  .home-popup-sort-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+    font-weight: 600;
+    color: var(--el-text-color-primary);
+  }
+  .home-popup-sort-header::before {
+    display: inline-block;
+    width: 3px;
+    height: 14px;
+    margin-right: 8px;
+    border-radius: 2px;
+    background: var(--el-color-primary);
+    content: '';
+  }
+  .home-popup-sort-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 8px;
+  }
+  .home-popup-sort-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    min-width: 0;
+    min-height: 58px;
+    padding: 8px 10px;
+    border: 1px solid var(--el-border-color-lighter);
+    border-radius: 6px;
+    background: var(--el-fill-color-blank);
+    column-gap: 8px;
+    row-gap: 4px;
+    transition:
+      border-color 0.2s ease,
+      box-shadow 0.2s ease,
+      background-color 0.2s ease;
+  }
+  .home-popup-sort-item:hover {
+    border-color: var(--el-color-primary-light-5);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 5%);
+  }
+  .home-popup-sort-item.disabled {
+    color: var(--el-text-color-secondary);
+    background: var(--el-fill-color-extra-light);
+  }
+  .home-popup-sort-drag-area {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr);
+    align-items: center;
+    min-width: 0;
+    gap: 8px;
+    cursor: move;
+  }
+  .home-popup-sort-item .drag-handle {
+    flex: 0 0 auto;
+    color: var(--el-text-color-secondary);
+    cursor: move;
+  }
+  .home-popup-sort-item .order {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--el-color-primary-light-9);
+    color: var(--el-color-primary);
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .home-popup-sort-item .content {
+    display: flex;
+    align-items: flex-start;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 4px;
+  }
+  .home-popup-sort-item .name {
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .home-popup-sort-item .popup-switch {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex: 0 0 auto;
+    min-width: 52px;
+    color: var(--el-text-color-secondary);
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  :deep(.home-popup-sort-ghost) {
+    opacity: 0.45;
+  }
+  :deep(.home-popup-sort-chosen) {
+    border-color: var(--el-color-primary);
+  }
+  @media (max-width: 640px) {
+    .home-popup-sort-list {
+      grid-template-columns: 1fr;
+    }
+    .home-popup-sort-item {
+      grid-template-columns: 1fr;
+    }
+    .home-popup-sort-item .popup-switch {
+      justify-content: flex-start;
+      min-width: 0;
+    }
+  }
   .activity-item {
     margin-bottom: 10px;
     padding: 10px 12px;
