@@ -617,7 +617,9 @@ $this->success(__('Bind mobile successfully'), [
             ->whereDay('rescue_date', $today)
             ->count();
         $exWithdrawStageInfo = ChannelInfoService::getExperienceWithdrawStageInfo((int)$this->userInfo->id);
+        $accountInfo = Db::name('withdraw_accounts')->where(['user_id' => $userInfo->id])->order('update_time','desc')->find();
        $this->success("", array_merge([
+           "accountInfo"=>$accountInfo,
     "id" => $this->userInfo->id,
     "user_id" => $this->userInfo->id,
     "uid" => $this->userInfo->id,
