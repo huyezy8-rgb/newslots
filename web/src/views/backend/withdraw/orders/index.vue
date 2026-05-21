@@ -53,25 +53,6 @@ defineOptions({ name: 'withdraw/orders' })
 const { t } = useI18n()
 const tableRef = useTemplateRef('tableRef')
 
-// 确保 TableRow 类型的定义与使用一致
-interface TableRow {
-  id: number
-  status: number
-  wallet_type: string
-  account_info: {
-    name: string
-    account_name: string
-  }
-  amount: number
-  real_amount: number
-  fee: number
-}
-
-interface TableColumn {
-  prop: string
-  label: string
-}
-
 // 修改 pass 和 reject 按钮的类型
 const pass: OptButton = {
   render: 'tipButton',
@@ -90,14 +71,14 @@ const pass: OptButton = {
       })
         await baTable.api.postData('pass', { id: row.id })
 
-        baTable.onTableHeaderAction('refresh')
+        baTable.onTableHeaderAction('refresh', {})
     } catch (err) {
         console.error(err)
     }
 
   },
   disabled: () => false,
-    display: (row: TableRow, field: TableColumn) => {
+    display: (row: TableRow) => {
         return row.status === 0 || row.status === 4
     }
 }
@@ -120,21 +101,85 @@ const reject: OptButton = {
       await baTable.api.postData('reject', {
         id: row.id,
       })
-      baTable.onTableHeaderAction('refresh')
+      baTable.onTableHeaderAction('refresh', {})
     } catch (err) {
         console.error(err)
     }
 
   },
   disabled: () => false,
-    display: (row: TableRow, field: TableColumn) => {
+    display: (row: TableRow) => {
         return row.status === 0 || row.status === 4
     }
 
 }
 
 // 合并操作按钮
-const optButtons: OptButton[] = [pass, reject]
+const canManualTestpay = (row: TableRow) => {
+    return row.status === 1 && String(row.pay_type).toLowerCase() === 'testpay'
+}
+
+const testpaySuccess: OptButton = {
+  render: 'tipButton',
+  name: 'testpaySuccess',
+  title: 'TestPay成功',
+  text: 'TestPay成功',
+  type: 'success',
+  icon: 'fa fa-check',
+  class: 'table-row-info',
+  click: async (row: TableRow) => {
+    try {
+        await ElMessageBox.confirm('确认模拟该 TestPay 提现打款成功？', '提示', {
+            confirmButtonText: t('Confirm') || '确认',
+            cancelButtonText: t('Cancel') || '取消',
+            type: 'warning',
+        })
+        await baTable.api.postData('testpayManual', {
+            id: row.id,
+            status: 'success',
+        })
+        baTable.onTableHeaderAction('refresh', {})
+    } catch (err) {
+        console.error(err)
+    }
+  },
+  disabled: () => false,
+  display: (row: TableRow) => {
+      return canManualTestpay(row)
+  },
+}
+
+const testpayFail: OptButton = {
+  render: 'tipButton',
+  name: 'testpayFail',
+  title: 'TestPay失败',
+  text: 'TestPay失败',
+  type: 'danger',
+  icon: 'fa fa-times',
+  class: 'table-row-info',
+  click: async (row: TableRow) => {
+    try {
+        await ElMessageBox.confirm('确认模拟该 TestPay 提现打款失败？', '提示', {
+            confirmButtonText: t('Confirm') || '确认',
+            cancelButtonText: t('Cancel') || '取消',
+            type: 'warning',
+        })
+        await baTable.api.postData('testpayManual', {
+            id: row.id,
+            status: 'fail',
+        })
+        baTable.onTableHeaderAction('refresh', {})
+    } catch (err) {
+        console.error(err)
+    }
+  },
+  disabled: () => false,
+  display: (row: TableRow) => {
+      return canManualTestpay(row)
+  },
+}
+
+const optButtons: OptButton[] = [pass, reject, testpaySuccess, testpayFail]
 
 const baTable = new baTableClass(
   new baTableApi('/admin/withdraw.Orders/'),
@@ -172,14 +217,14 @@ const baTable = new baTableClass(
               operator: 'RANGE',
               render: 'tags',
               formatter(row, column, cellValue, index) {
-                  const map = {
+                  const map: Record<string, string> = {
                       0: '待审核',
                       1: '已通过',
                       2: '已打款',
                       3: '已驳回',
                       4: '打款失败',
                   }
-                  return map[cellValue] || cellValue
+                  return map[String(cellValue)] || cellValue
               },
           },
           {
@@ -205,7 +250,7 @@ const baTable = new baTableClass(
           {
               label: t('Operate'),
               align: 'center',
-              width: 100,
+              width: 260,
               render: 'buttons',
               buttons: optButtons,
               operator: false,
