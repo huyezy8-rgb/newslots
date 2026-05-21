@@ -259,16 +259,52 @@ class FirstDeposit270 extends Base
         if ($diff_days < 2) {
             $this->error(__('Not reach receive time')); // 未到领取时间
         }
+        $index = $diff_days - 2;
         Db::startTrans();
         try {
-            $day_reward = get_object_vars($task['day_reward']);
-            $amount = $day_reward[$diff_days-2]['reward'];
-            $day_reward[$diff_days-2]['status'] =1;
+//            $day_reward = get_object_vars($task['day_reward']);
+//            $amount = $day_reward[$diff_days-2]['reward'];
+//            $day_reward[$diff_days-2]['status'] =1;
+//            $task->day_reward = $day_reward;
+//            $task->day_reward_time = time();
+//            $task->save();
+
+            // ========== 原逻辑：获取奖励数组 ==========
+            $day_reward = $task['day_reward'] ?? [];
+            if (is_object($day_reward)) {
+                $day_reward = get_object_vars($day_reward);
+            }
+            $day_reward = (array)$day_reward;
+
+            // 判断当前奖励是否存在
+            if (!isset($day_reward[$index])) {
+                throw new \Exception(__('Reward configuration error, cannot receive'));
+            }
+            if (!empty($day_reward[$index]['status'])) {
+                throw new \Exception(__('Already received today'));
+            }
+
+            $amount = $day_reward[$index]['reward'] ?? 0;
+            if ($amount <= 0) {
+                throw new \Exception(__('Reward amount error'));
+            }
+
+            foreach ($day_reward as $key => &$item) {
+                // 只处理【今天之前】的天数
+                if ($key < $index) {
+                    // 如果之前没领（0），就改成 3
+                    if ($item['status'] == 0) {
+                        $item['status'] = 3;
+                    }
+                }
+            }
+            unset($item);
+            $day_reward[$index]['status'] = 1;
             $task->day_reward = $day_reward;
             $task->day_reward_time = time();
             $task->save();
-            $logTypeId = CoinLog::FirstDeposit270;
 
+            $logTypeId = CoinLog::FirstDeposit270;
             $this->getAccountService()->increaseBalance(
                 userId: $this->userInfo['id'],
                 amount: $amount,
