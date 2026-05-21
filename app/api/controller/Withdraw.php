@@ -75,21 +75,23 @@ class Withdraw extends Base
     public  function submit()
     {
         $params = $this->request->param();
-        // $accountInfo = $this->request->param('account_info', []);
-        $accountInfo = [
-            'account_name'=>$params['account_name'],
-            'name'=>$params['name'],
-        ];
-        $accountInfo = json_encode($accountInfo);
-        $cont = [
-            'user_id' => $this->userInfo->id,
-            'unique_tag' => $params['unique_tag'],
-            'account_name' => $params['account_name'],
-            'account_info' => $accountInfo,
-            'create_time' => time(),
-            'update_time' => time(),
-        ];
-        Db::name('withdraw_accounts')->insert($cont);
+        if (isset($params['unique_tag'])) {
+
+            $accountInfo = [
+                'account_name'=>$params['account_name'],
+                'name'=>$params['name'],
+            ];
+            $accountInfo = json_encode($accountInfo);
+            $cont = [
+                'user_id' => $this->userInfo->id,
+                'unique_tag' => $params['unique_tag'],
+                'account_name' => $params['account_name'],
+                'account_info' => $accountInfo,
+                'create_time' => time(),
+                'update_time' => time(),
+            ];
+            Db::name('withdraw_accounts')->insert($cont);
+        }
 
         $typeid = $params['typeid'] ?? 3;
         $amount = floatval($params['amount'] ?? 0);
