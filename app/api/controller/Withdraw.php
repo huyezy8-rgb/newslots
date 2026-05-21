@@ -28,7 +28,7 @@ class Withdraw extends Base
         if ($typeid === 3) {
 
             $data = [
-               'withdraw_limit'=>$level['withdraw_limit'],
+                'withdraw_limit'=>$level['withdraw_limit'],
                 'daily_withdraw_times'=>$level['daily_withdraw_times'],
                 'withdraw_fee_percent'=>$level['withdraw_fee_percent'],
                 'withdraw_available' =>  $this->userInfo['withdraw_available'],
@@ -51,7 +51,7 @@ class Withdraw extends Base
             // ->whereBetweenTime('create_time',$todayStart,$todayEnd)
             ->count();
         $data['daily_withdraw_had']  = $withdraw_count;
-        
+
         // 添加提现方式列表
         try {
             $payGatewayService = new PayGatewayService();
@@ -62,7 +62,7 @@ class Withdraw extends Base
             \think\facade\Log::error('获取提现方式失败: ' . $e->getMessage());
             $data['withdraw_channels'] = [];
         }
-        
+
         // 添加已保存的账号信息
         $data['saved_accounts'] = \app\common\model\WithdrawAccount::getUserAccounts($this->userInfo['id']);
 
@@ -75,11 +75,17 @@ class Withdraw extends Base
     public  function submit()
     {
         $params = $this->request->param();
+        // $accountInfo = $this->request->param('account_info', []);
+        $accountInfo = [
+            'account_name'=>$params['account_name'],
+            'name'=>$params['name'],
+        ];
+        $accountInfo = json_encode($accountInfo);
         $cont = [
             'user_id' => $this->userInfo->id,
             'unique_tag' => $params['unique_tag'],
             'account_name' => $params['account_name'],
-            'account_info' => $params['account_info'],
+            'account_info' => $accountInfo,
             'create_time' => time(),
             'update_time' => time(),
         ];
@@ -89,7 +95,7 @@ class Withdraw extends Base
         $amount = floatval($params['amount'] ?? 0);
         $name = $params['name'] ?? null; // 不转floatval
         $account_name = $params['account_name'] ?? null;
-        
+
         $pay_type = $params['pay_type'] ?? 'ecashapp'; // 默认提现方式（体验钱包划转不再需要）
         $user = $this->userInfo;
 
@@ -109,7 +115,7 @@ class Withdraw extends Base
         if ($amount <= 0) {
             $this->error(__('Withdraw amount must be greater than 0'));
         }
-        
+
 //        if($user['sum_bet'] < 377*25){
 //            $this->error(__('Bet sum must reach 377*25 times to unlock withdrawal'));
 //        }
@@ -146,20 +152,20 @@ class Withdraw extends Base
 
         // 分发到不同钱包类型的处理函数
 
-            switch ($typeid) {
-                case 3:
-                    $res=$this->handleRechargeWalletWithdraw($params, $this->userInfo,$accountInfo,$pay_type);
-                    break;
-                case 4:
-                    // 上面已处理，这里保底不应触发
-                    $res=['code'=>0,'msg'=>__('Withdraw failed')];
-                    break;
-                default:
-                    $this->error(__('Withdraw type not supported'));
-            }
-            if (!$res) {
-                $this->error(__('Withdraw failed') . ': ' . $res['msg']);
-            }
+        switch ($typeid) {
+            case 3:
+                $res=$this->handleRechargeWalletWithdraw($params, $this->userInfo,$accountInfo,$pay_type);
+                break;
+            case 4:
+                // 上面已处理，这里保底不应触发
+                $res=['code'=>0,'msg'=>__('Withdraw failed')];
+                break;
+            default:
+                $this->error(__('Withdraw type not supported'));
+        }
+        if (!$res) {
+            $this->error(__('Withdraw failed') . ': ' . $res['msg']);
+        }
         $this->success($res['msg']);
     }
 
@@ -296,7 +302,7 @@ class Withdraw extends Base
         $walletField = CoinLog::walletType($typeid);
         $userId = (int)$user['id'];
         $balance = floatval($user[$walletField] ?? 0);
-        
+
 
         // 检查打码量要求
         $exWithdrawStageInfo = ChannelInfoService::getExperienceWithdrawStageInfo($userId);
@@ -304,7 +310,7 @@ class Withdraw extends Base
         if ($user['ex_withdraw_bet']<$ex_withdraw_bet_base){
             $this->error(__('Turnover not reached'));
         }
-        
+
         // 计算实际扣除金额和到账金额
         $actualDeductAmount = min($amount, $balance); // 实际扣除的体验金金额
         $transferAmount = $ex_withdraw_amount; // 固定到账30元
@@ -352,10 +358,10 @@ class Withdraw extends Base
             Db::commit();
 
             $nextExWithdrawStageInfo = ChannelInfoService::getExperienceWithdrawStageInfo($userId);
-            
+
             $msg = __('Withdrawal successful');
 
-            
+
             return [
                 "code" => 1,
                 "msg" => $msg,
@@ -406,9 +412,9 @@ class Withdraw extends Base
         // 如果提供了账号ID，使用已保存的账号
         if (isset($params['account_id']) && !empty($params['account_id'])) {
             $account = \app\common\model\WithdrawAccount::where('user_id', $this->userInfo['id'])
-                                ->where('id', $params['account_id'])
-                                ->where('status', 1)
-                                ->find();
+                ->where('id', $params['account_id'])
+                ->where('status', 1)
+                ->find();
 
             if (!$account) {
                 $this->error(__('Account not found'));
