@@ -82,7 +82,8 @@ class FirstDepositDaily extends Base
                 'context' => $config->context,
                 'amount_list' => $mergedAmountList,
                 'pay_channels' => $availableChannels,
-                'enable_reward' => $config->reward_strategy,
+                'enable_reward' => $config->enable_reward,
+                'reward_strategy' => $config->reward_strategy,
                 'reward_value' => $config->reward_value,
                 'task_reward' => $config->task_reward,
                 'task_status' => $task->task_status,
@@ -108,13 +109,15 @@ class FirstDepositDaily extends Base
         Db::startTrans();
         try {
 
+            $rewardAmount = (float)$config->task_reward;
+
             $task->receive_status = 2;
             $task->save();
             $logTypeId = CoinLog::FirstDepositDaily;
 
             $this->getAccountService()->increaseBalance(
                 userId: $this->userInfo['id'],
-                amount: $config->task_reward,
+                amount: $rewardAmount,
                 walletType: 1,
                 logTypeId: $logTypeId,  // ✅ 使用定义的常量
                 note: CoinLog::getTypeText($logTypeId) . ":领取每日首充完成任务奖励"
@@ -125,6 +128,11 @@ class FirstDepositDaily extends Base
             Db::rollback();
             $this->error(__('Receive failed') . '：' . $e->getMessage()); // 领取失败
         }
-        $this->success(__('OK')); // 成功
+        $this->success(__('OK'), [
+            'reward_amount' => $rewardAmount,
+            'task_reward' => $config->task_reward,
+            'task_status' => $task->task_status,
+            'receive_status' => $task->receive_status,
+        ]); // 成功
     }
 }

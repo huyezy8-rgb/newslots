@@ -3,6 +3,7 @@
 namespace app\admin\controller\withdraw;
 
 use app\api\controller\Jackpot;
+use app\api\controller\Notify;
 use app\api\enum\CoinLog;
 use app\common\controller\Backend;
 use app\common\model\jackpot\JackpotWithdrawLog;
@@ -10,6 +11,7 @@ use app\common\model\payment\Methods;
 use app\common\model\PddProgress;
 use app\common\service\AccountService;
 use app\common\service\PayGatewayService;
+use app\common\service\TestPaymentCallbackService;
 use ba\PaymentHelper;
 use think\db\Query;
 use think\facade\Db;
@@ -293,7 +295,19 @@ class Orders extends Backend
             }
 
 
-            if ($pass_type == 'SaxPay') {
+            if (strtolower((string)$payType) === 'testpay') {
+                $res = $this->getPayService()->createTransfer([
+                    'order_no' => $orderno,
+                    'amount' => $order->real_amount,
+                    'pay_type' => $payType,
+                    'extra' => $extraParams,
+                ]);
+                if (($res['code'] ?? 1) != 0) {
+                    throw new \Exception($res['message'] ?? 'TestPay代付创建失败');
+                }
+                $platform_order_no = $res['data']['transferOrderNo'] ?? $orderno;
+                $response = json_encode($res, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            } elseif ($pass_type == 'SaxPay') {
                 $payway = "https://saxpay.payc2-sapi.com/apis/pay/order/bk_daifu";
                 $payarr = array(
                     "merch" => '453',
@@ -401,6 +415,62 @@ class Orders extends Backend
         $this->success('操作成功,等待打款');
     }
 
+
+    /**
+     * TestPay 提现代付手动回调
+     */
+    public function testpayManual(): void
+    {
+        $id = $this->request->post('id');
+        $status = strtolower(trim((string)$this->request->post('status', '')));
+
+        if (!$id) {
+            $this->error('参数错误');
+        }
+        if (!in_array($status, ['success', 'fail'], true)) {
+            $this->error('状态参数错误');
+        }
+
+        $order = Db::name('withdraw_orders')->where('id', $id)->find();
+        if (!$order) {
+            $this->error('订单不存在');
+        }
+        if (strtolower((string)$order['pay_type']) !== 'testpay') {
+            $this->error('仅支持TestPay提现订单');
+        }
+        if ((int)$order['status'] !== 1) {
+            $this->error('仅支持待打款订单模拟回调');
+        }
+        if (empty($order['order_no'])) {
+            $this->error('订单未发起代付，请先审核通过');
+        }
+
+        $orderNo = (string)$order['order_no'];
+        $platformOrderNo = $order['platform_order_no'] ?: 'TESTTRAN' . $orderNo;
+        $finalStatus = $status === 'success' ? 2 : 4;
+        $data = [
+            'state' => $status === 'success' ? Notify::PAY_SUCCESS : 3,
+            'mchOrderNo' => $orderNo,
+            'orderNo' => $platformOrderNo,
+            'amount' => bcmul((string)($order['real_amount'] ?? $order['amount']), '100', 0),
+            'successTime' => time() * 1000,
+            'testpay_manual_status' => $status,
+        ];
+
+        try {
+            (new TestPaymentCallbackService())->process($orderNo, $platformOrderNo, $data, $this->request);
+        } catch (\Throwable $e) {
+            $this->error('TestPay模拟回调失败：' . $e->getMessage());
+        }
+
+        $this->success('操作成功', [
+            'id' => $id,
+            'order_no' => $orderNo,
+            'platform_order_no' => $platformOrderNo,
+            'status' => $finalStatus,
+            'testpay_status' => $status,
+        ]);
+    }
 
     /**
      * 驳回提现订单（不需要理由，金额原路返回）
