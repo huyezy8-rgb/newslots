@@ -92,14 +92,44 @@ class Recharge extends Base
         $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
         $host = $_SERVER['HTTP_HOST'] ?? '';
         $baseUrl = $host ? "{$scheme}://{$host}" : '';
+        $cashierPath = root_path('public') . 'testpay' . DIRECTORY_SEPARATOR . 'cashier.html';
 
         return $baseUrl . '/testpay/cashier.html?' . http_build_query([
+            'v' => is_file($cashierPath) ? filemtime($cashierPath) : time(),
             'order_no' => $orderNo,
             'amount' => number_format($amount, 2, '.', ''),
             'expired_at' => $expiredAt,
             'token' => $this->userInfo['token'] ?? '',
             'return_url' => $returnUrl,
         ]);
+    }
+
+    private function buildRechargeReturnUrl(string $channelName): string
+    {
+        $referer = $_SERVER['HTTP_REFERER'] ?? 'https://h5cs.tapmc.net/';
+        $parts = parse_url($referer);
+
+        if (!is_array($parts) || empty($parts['host'])) {
+            $parts = parse_url('https://h5cs.tapmc.net/');
+        }
+
+        $scheme = $parts['scheme'] ?? 'https';
+        $host = $parts['host'] ?? 'h5cs.tapmc.net';
+        $port = isset($parts['port']) ? ':' . $parts['port'] : '';
+        $origin = "{$scheme}://{$host}{$port}";
+
+        $channelSegment = rawurlencode($channelName);
+        $pathSegments = array_values(array_filter(explode('/', trim((string)($parts['path'] ?? ''), '/')), 'strlen'));
+        $returnSegments = [$channelSegment];
+
+        foreach ($pathSegments as $index => $segment) {
+            if (urldecode($segment) === $channelName) {
+                $returnSegments = array_slice($pathSegments, 0, $index + 1);
+                break;
+            }
+        }
+
+        return rtrim($origin, '/') . '/' . implode('/', $returnSegments) . '/#/pages/view/payment/paySuccess';
     }
 
     public function index()
@@ -470,8 +500,8 @@ class Recharge extends Base
             $this->error(__('Please select channel'));
         }
 
-        // 优先使用 HTTP_REFERER，如果不存在则使用默认 URL
-        $return_url = ($_SERVER['HTTP_REFERER'] ?? 'https://h5cs.tapmc.net/') . $channel_name . '/#/pages/view/payment/paySuccess';
+        // 根据来源域名构造回跳地址，避免携带旧 query/hash 参数
+        $return_url = $this->buildRechargeReturnUrl($channel_name);
 
 
         $orderno = PaymentHelper::generateOrderNo('PAY');

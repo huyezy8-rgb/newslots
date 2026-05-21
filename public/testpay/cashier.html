@@ -3,6 +3,9 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>TestPay Cashier</title>
     <style>
         * {
@@ -249,6 +252,40 @@
         buttons.forEach((button) => button.disabled = loading);
     }
 
+    function normalizeReturnUrl(status) {
+        if (!returnUrl) {
+            return '';
+        }
+
+        try {
+            const url = new URL(returnUrl, window.location.origin);
+            const staleKeys = ['status', 'pay_status', 'testpay_status', 'testpay_manual_status'];
+
+            staleKeys.forEach((key) => url.searchParams.delete(key));
+
+            if (url.hash) {
+                const queryIndex = url.hash.indexOf('?');
+                const route = queryIndex === -1 ? url.hash : url.hash.slice(0, queryIndex);
+                const query = queryIndex === -1 ? '' : url.hash.slice(queryIndex + 1);
+                const hashParams = new URLSearchParams(query);
+
+                staleKeys.forEach((key) => hashParams.delete(key));
+                if (status) {
+                    hashParams.set('status', status);
+                }
+
+                const hashQuery = hashParams.toString();
+                url.hash = hashQuery ? route + '?' + hashQuery : route;
+            } else if (status) {
+                url.searchParams.set('status', status);
+            }
+
+            return url.href;
+        } catch (error) {
+            return returnUrl;
+        }
+    }
+
     async function submitStatus(status) {
         if (!orderNo) {
             showMessage('Missing order number.', 'error');
@@ -281,7 +318,7 @@
             showMessage('Payment status updated: ' + status.toUpperCase(), 'ok');
             if (returnUrl) {
                 setTimeout(() => {
-                    window.location.href = returnUrl;
+                    window.location.href = normalizeReturnUrl(status);
                 }, 900);
             }
         } catch (error) {
@@ -292,14 +329,18 @@
 
     document.querySelector('.back').addEventListener('click', () => {
         if (returnUrl) {
-            window.location.href = returnUrl;
+            window.location.href = normalizeReturnUrl();
             return;
         }
         history.back();
     });
 
     buttons.forEach((button) => {
-        button.addEventListener('click', () => submitStatus(button.dataset.status));
+        const status = button.getAttribute('data-status') || '';
+        button.addEventListener('click', (event) => {
+            event.preventDefault();
+            submitStatus(status);
+        });
     });
 
     tick();
