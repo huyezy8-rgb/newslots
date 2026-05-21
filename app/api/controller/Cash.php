@@ -186,11 +186,11 @@ if (is_numeric($params['ReqTime']) && strlen((string)$params['ReqTime']) >= 13) 
 
             if ($user_info['switch_wallet'] == 1) {
 
-
-                // 根据打码量计算
-                Log::info('Cash@transferInOut 打码计算: ');
-                (new DmlService())->updateDml($userId, abs(floatval($params['Amount'])),$newBalance);
-
+                if($log_type_id != 6) {
+                    // 根据打码量计算
+                    Log::info('Cash@transferInOut 打码计算: ');
+                    (new DmlService())->updateDml($userId, abs(floatval($params['Amount'])), $newBalance);
+                }
 
 
                 if ($params['Reason'] == "bet") {

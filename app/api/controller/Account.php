@@ -642,6 +642,17 @@ $this->success(__('Bind mobile successfully'), [
             "ex_withdraw_amount"  => ChannelInfoService::getExperienceWithdrawAmount(),
         ], $exWithdrawStageInfo));
     }
+    /**
+     * 获取用户默认提现账户信息
+     */
+    public function info_accounts()
+    {
+        $list = Db::name("withdraw_accounts")->where('user_id', $this->userInfo->id)
+            ->order( 'update_time','desc')
+            ->find();
+        $this->success('', $list);
+
+    }
 
     /**
      * 获取游戏记录
