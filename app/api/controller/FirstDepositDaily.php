@@ -131,6 +131,7 @@ class FirstDepositDaily extends Base
         $this->success(__('OK'), [
             'reward_amount' => $rewardAmount,
             'task_reward' => $config->task_reward,
+            'task_status' => $task->task_status,
             'receive_status' => $task->receive_status,
         ]); // 成功
     }
