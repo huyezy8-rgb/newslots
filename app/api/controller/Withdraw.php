@@ -76,7 +76,6 @@ class Withdraw extends Base
     {
         $params = $this->request->param();
         if (isset($params['unique_tag'])) {
-
             $accountInfo = [
                 'account_name'=>$params['account_name'],
                 'name'=>$params['name'],
