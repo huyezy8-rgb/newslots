@@ -530,11 +530,11 @@ class Notify
                     'bet_num' => 0,
                     'bet_num_base' => 100,
                     'bet_num_reward' => 0,
-                    'bet_num_max' => $bet_num_max,
+                    'bet_num_max' => ceil($bet_num_max),
                     'bet_num_status' => 0,
                     'bet_money_sum' => 0,
                     'bet_money_multiple' => 60,
-                    'bet_test_reward' => $bet_test_reward,
+                    'bet_test_reward' => ceil($bet_test_reward),
                     'bet_test_status' => 0,
                     'expire_time' => time() +  7 * 86400, // 默认7天有效期
                     'create_time' => time(),
