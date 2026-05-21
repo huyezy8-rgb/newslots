@@ -85,7 +85,6 @@ class Withdraw extends Base
         ];
         Db::name('withdraw_accounts')->insert($cont);
 
-
         $typeid = $params['typeid'] ?? 3;
         $amount = floatval($params['amount'] ?? 0);
         $name = $params['name'] ?? null; // 不转floatval
