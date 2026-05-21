@@ -649,12 +649,12 @@ class Notify
                     'bet_num' => 0, // 初始投注次数
                     'bet_num_reward' => 0, // 已领取投注奖励
                     'bet_num_base' =>  $reg_config['bet_sum_reward']->base ?? 100,
-                    'bet_num_max' => $reg_config['bet_sum_reward']->max_reward_percent
+                    'bet_num_max' => ceil($reg_config['bet_sum_reward']->max_reward_percent)
                         ? bcdiv(bcmul($reg_config['bet_sum_reward']->max_reward_percent, $order['amount'], 2), 100, 2)
                         : 0,
                     'bet_money_sum' => 0, // 初始累计投注金额
                     'bet_money_multiple' => $reg_config['bet_test_reward']->multiple ?? 60, // 默认3倍
-                    'bet_test_reward' => $reg_config['bet_test_reward']->reward_percent
+                    'bet_test_reward' => ceil($reg_config['bet_test_reward']->reward_percent)
                         ? bcdiv(bcmul($reg_config['bet_test_reward']->reward_percent, $order['amount'], 2), 100, 2)
                         : 0,
                     'expire_time' => time() + ($reg_config['task_valid_days'] ?? 7) * 86400, // 默认7天有效期
