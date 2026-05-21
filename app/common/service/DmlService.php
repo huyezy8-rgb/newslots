@@ -33,6 +33,7 @@ class DmlService
             CoinLog::WithdrawRefund, 
             CoinLog::ExWithdrawRefund, 
             CoinLog::PDDWithdrawRefund,
+            CoinLog::GameWin,
             
             // 游戏退款（非收入）
             CoinLog::GameRefund,

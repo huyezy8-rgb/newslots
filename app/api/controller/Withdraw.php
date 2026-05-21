@@ -101,9 +101,9 @@ class Withdraw extends Base
             $this->error(__('Withdraw amount must be greater than 0'));
         }
         
-        if($user['sum_bet'] < 377*25){
-            $this->error(__('Bet sum must reach 377*25 times to unlock withdrawal'));
-        }
+//        if($user['sum_bet'] < 377*25){
+//            $this->error(__('Bet sum must reach 377*25 times to unlock withdrawal'));
+//        }
 
         //验证VIP等级，必须要达成VIP，否则不能提现，达到VIP1时提示需要达到VIP2
         if($user['vip']==0){
