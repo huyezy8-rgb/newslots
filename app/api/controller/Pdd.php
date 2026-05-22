@@ -391,9 +391,7 @@ class Pdd extends Base
 //            ->where('log_type_id', \app\api\enum\CoinLog::CommissionBet)
 //            ->where('num', '>', 0)
 //            ->sum('num');
-        $totalCommission = Db::name('account')
-            ->where('user_id', $userId)
-            ->value('commission_balance');
+        $totalCommission = (float)Db::name('account')->where('id', $userId)->value('commission_balance');
         
         return [
             'extractable_commission' => round($extractableCommission, 2),
