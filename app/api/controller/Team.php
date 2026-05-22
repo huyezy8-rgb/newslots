@@ -100,7 +100,7 @@ class Team extends Base
 
             // 为每个代理添加佣金数据
             foreach ($agents as &$agent) {
-                $agentData = $this->getAgentCommissionData($agent['id']);
+                $agentData = $this->getAgentCommissionData($agent['id'],$userId);
                 $agent = array_merge($agent, $agentData);
             }
 
@@ -171,21 +171,24 @@ class Team extends Base
     /**
      * 获取单个代理的佣金数据
      */
-    private function getAgentCommissionData($agentId)
+    private function getAgentCommissionData($agentId,$userId)
     {
         // 获取该代理的投注额
         $betAmount = Db::name('team_commission_log')
             ->where('source_user_id', $agentId)
+            ->where('user_id', $userId)
             ->sum('bet_amount');
 
         // 获取从该代理获得的佣金
         $commission = Db::name('team_commission_log')
             ->where('source_user_id', $agentId)
+            ->where('user_id', $userId)
             ->sum('commission');
 
         // 获取下级佣金（该代理作为user_id获得的佣金）
         $lowerCommission = Db::name('team_commission_log')
             ->where('source_user_id', $agentId)
+            ->where('user_id', $userId)
             ->sum('commission');
 
         return [
