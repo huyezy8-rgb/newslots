@@ -101,17 +101,6 @@ class FirstDeposit270 extends Base
         $availableChannels = (new \app\common\service\PayGatewayService())->getAvailablePayChannels($this->userInfo['id'], $payChannels);
 
         /*统计270活动签到，投注奖励，投注任务金额总和*/
-        $qd_total = json_decode($config->day_reward, true);
-        $total = 0.00;
-        foreach ($qd_total as $item) {
-            if ($item['status'] == 1) {
-                $total += floatval($item['reward']);
-            }
-        }
-        $AllMoney270 =$config['bet_num_reward'] + $config['bet_test_reward'] + $total;
-
-
-        /*统计270活动签到，投注奖励，投注任务金额总和*/
         $bet_num_reward = Db::name('activity_first_deposit_270_user')->where('user_id',$userId)->value('bet_num_reward');
         $bet_test_reward = Db::name('activity_first_deposit_270_user')->where('user_id',$userId)->value('bet_test_reward');
         $qd_reward = Db::name('activity_first_deposit_270_user')->where('user_id',$userId)->value('day_reward');
