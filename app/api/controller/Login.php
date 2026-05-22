@@ -187,6 +187,31 @@ class Login extends Api
                             'fbp' => $this->fbp,
                         ]
                     ], 'facebook_conversion');
+                try {
+                    $fbData = [
+                        'user_id' => $model->id,
+                        'event_id' => $data["event_id"] ?? '',
+                        'event_type' => 'register',
+                        'event_source_url' => \think\facade\Request::url(true),
+                        'custom_data' => [
+                            'method' => 'h5',
+                            'channel_name' => $channelInfo->name,
+                            'invite_code' => $data["invite_code"] ?? null,
+                            'p_id' => $data["p_id"] ?? null
+                        ],
+                        'client_ip' => $this->request->ip(),
+                        'client_user_agent' => $this->request->header('user-agent'),
+                        'fbc' => $this->fbc ?? '',
+                        'fbp' => $this->fbp ?? '',
+                    ];
+
+                    // 直接触发系统已有的事件（和购物车/充值一样）
+                    event('FacebookConversion', $fbData);
+
+                    \think\facade\Log::info('[同步]注册事件已发送 user_id:'.$model->id);
+                } catch (\Throwable $e) {
+                    \think\facade\Log::error('[同步]注册失败:'.$e->getMessage());
+                }
 
                 \think\facade\Log::info('队列推送结果：' . ($queueResult ? '成功' : '失败'));
                                     // 事务提交
