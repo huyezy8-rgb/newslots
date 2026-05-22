@@ -132,6 +132,13 @@
                         prop="kefu_channel_url"
                         :placeholder="t('Please input field', { field: t('channel.listsss.kefu_channel_url') })"
                     />
+                    <FormItem
+                        :label="t('channel.listsss.messenger_url')"
+                        type="string"
+                        v-model="baTable.form.items!.messenger_url"
+                        prop="messenger_url"
+                        :placeholder="'https://m.me/your_page 或 Messenger 跳转链接'"
+                    />
                     <!-- 语言 / 货币 / 时区 新增字段 -->
                     <FormItem
                         :label="t('channel.listsss.lang')"
@@ -484,11 +491,12 @@ function initHomePopupSortable() {
 }
 
 function ensureDefaults() {
+    const items = baTable.form.items as any
     // 默认美国
-    baTable.form.items!.lang = (baTable.form.items as any).lang ?? 'en'
-    baTable.form.items!.currency_code = (baTable.form.items as any).currency_code ?? 'USD'
-    baTable.form.items!.currency_symbol = (baTable.form.items as any).currency_symbol ?? '$'
-    baTable.form.items!.time_zone = (baTable.form.items as any).time_zone ?? 'America/New_York'
+    items.lang = items.lang ?? 'en'
+    items.currency_code = items.currency_code ?? 'USD'
+    items.currency_symbol = items.currency_symbol ?? '$'
+    items.time_zone = items.time_zone ?? 'America/New_York'
 }
 
 async function loadActivityOptions(row?: any) {

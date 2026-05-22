@@ -173,6 +173,15 @@ const baTable = new baTableClass(
                 sortable: false,
                 minWidth: 160
             },
+            {
+                label: t('channel.listsss.messenger_url'),
+                prop: 'messenger_url',
+                align: 'center',
+                operatorPlaceholder: t('Fuzzy query'),
+                operator: 'LIKE',
+                sortable: false,
+                minWidth: 180
+            },
             // {
             //     label: "活动",
             //     prop: 'activity_list',

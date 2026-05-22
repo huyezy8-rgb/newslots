@@ -12,6 +12,7 @@ export default {
     manual_kefu_account: '人工客服账号',
     kefu_channel: '客服频道',
     kefu_channel_url: '客服频道URL',
+    messenger_url: 'Messenger跳转链接',
     create_time: '创建时间',
     'quick Search Fields': 'ID',
     lang: '语言',

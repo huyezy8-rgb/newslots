@@ -4,6 +4,7 @@ export default {
     domain: 'domain',
     theme: 'theme',
     experience_gold_limit: 'experience_gold_limit',
+    messenger_url: 'Messenger URL',
     create_time: 'create_time',
     'quick Search Fields': 'id',
     lang: 'Language',
