@@ -386,11 +386,14 @@ class Pdd extends Base
             ->sum('num');
         
         // 累计佣金收入
-        $totalCommission = Db::name('account_coin_log')
+//        $totalCommission = Db::name('account_coin_log')
+//            ->where('user_id', $userId)
+//            ->where('log_type_id', \app\api\enum\CoinLog::CommissionBet)
+//            ->where('num', '>', 0)
+//            ->sum('num');
+        $totalCommission = Db::name('account')
             ->where('user_id', $userId)
-            ->where('log_type_id', \app\api\enum\CoinLog::CommissionBet)
-            ->where('num', '>', 0)
-            ->sum('num');
+            ->value('commission_balance');
         
         return [
             'extractable_commission' => round($extractableCommission, 2),
