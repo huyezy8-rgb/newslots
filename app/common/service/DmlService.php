@@ -63,7 +63,7 @@ class DmlService
             case CoinLog::LeaderboardWeekly: 
             case CoinLog::LeaderboardMonthly: $multiple = $this->getBetMultiplierFromChannel($userId, 'leaderboard') ?: RankingActivity::where(['id'=>1])->value('bet_multiple'); break;
             
-            case CoinLog::SevenDayCard: $multiple = $this->getBetMultiplierFromChannel($userId, 'seven_day_card') ?: Db::name('seven_day_card_config')->where(['id'=>1])->value('bet_multiplier'); break;
+            case CoinLog::SevenDayCard: $multiple = $this->getBetMultiplierFromChannel($userId, 'seven_day_card') ?: Db::name('seven_day_card_config')->where(['id'=>1])->value('bet_multiple'); break;
 
             default:  $multiple = (float)get_sys_config('bet_multiplier') ?? 1; break; // 默认1倍
         }
