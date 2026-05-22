@@ -96,9 +96,6 @@ class DepositVip extends Base
 
 
 
-
-
-
     //领取投注奖励
     public function getBetNumReward(){
         $level = $this->request->param('level');

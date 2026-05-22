@@ -188,6 +188,7 @@ class FirstDeposit270 extends Base
         // 计算可领取次数（向下取整）
         $times = (int)bcdiv($task['bet_money_sum2'], $task['bet_num_base'], 0);
 
+
         $amount = bcmul($config['bet_sum_reward']->reward ,$times,2);
 
         // 计算本次发完之后总金额
