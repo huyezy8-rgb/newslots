@@ -100,6 +100,31 @@ class FirstDeposit270 extends Base
         $payChannels = is_array($config->pay_channels) ? $config->pay_channels : (get_object_vars($config->pay_channels) ?: []);
         $availableChannels = (new \app\common\service\PayGatewayService())->getAvailablePayChannels($this->userInfo['id'], $payChannels);
 
+        /*统计270活动签到，投注奖励，投注任务金额总和*/
+        $qd_total = json_decode($config->day_reward, true);
+        $total = 0.00;
+        foreach ($qd_total as $item) {
+            if ($item['status'] == 1) {
+                $total += floatval($item['reward']);
+            }
+        }
+        $AllMoney270 =$config['bet_num_reward'] + $config['bet_test_reward'] + $total;
+
+
+        /*统计270活动签到，投注奖励，投注任务金额总和*/
+        $bet_num_reward = Db::name('activity_first_deposit_270_user')->where('user_id',$userId)->value('bet_num_reward');
+        $bet_test_reward = Db::name('activity_first_deposit_270_user')->where('user_id',$userId)->value('bet_test_reward');
+        $qd_reward = Db::name('activity_first_deposit_270_user')->where('user_id',$userId)->value('day_reward');
+        $qd_reward = json_decode($qd_reward, true);
+
+        // 2. 计算 status = 1 的 reward 总和（TP8 集合写法）
+        $qd_total = collect($qd_reward)
+            ->where('status', 1)
+            ->sum(function ($item) {
+                return floatval($item['reward']);
+            });
+        $AllMoney270 = $bet_num_reward + $bet_test_reward + $qd_total;
+
         // 返回成功响应
         $this->success(__('Get recharge config success'), [
                 'title'=>$config->title,
@@ -113,7 +138,8 @@ class FirstDeposit270 extends Base
                 'endTime'=> $endTime,
                 'reg_status'=>$reg_status,
                 'task_status' => $task_status,
-                'activity_status' => $activity_status
+                'activity_status' => $activity_status,
+                'AllMoney270' => $AllMoney270
                 ]
         );
     }
