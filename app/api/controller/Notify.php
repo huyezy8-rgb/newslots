@@ -206,9 +206,13 @@ class Notify
             throw new \Exception("Recharge order not found: $orderNo");
         }
 
-        if ($order['pay_status'] == 1) {
+        if ($order['pay_status'] == 1 && !empty($order['paid_at'])) {
             Log::channel('payment')->info("订单已处理, orderNo: {$orderNo}");
             return;
+        }
+
+        if ($order['pay_status'] == 1) {
+            Log::channel('payment')->warning("Recharge order marked paid without paid_at, continue processing. orderNo: {$orderNo}");
         }
 
 
@@ -794,11 +798,12 @@ class Notify
         $updateData = [
             'pay_status' => $data['state'] == self::PAY_SUCCESS ? 1 : 2,
             'callback_data' => json_encode($data, JSON_UNESCAPED_UNICODE),
-            'paid_at' => $data['state'] == self::PAY_SUCCESS
-                ? intval($data['successTime']) / 1000
-                : null,
+            'paid_at' => $this->normalizePaidAt($data),
             'updated_at' => time()
         ];
+        if ($platformOrderNo !== '') {
+            $updateData['platform_order_no'] = $platformOrderNo;
+        }
         if (!empty($data['remark'])) {
             $updateData['remark'] = $data['remark'];
         }
@@ -806,6 +811,23 @@ class Notify
         Db::name('recharge_orders')
             ->where('id', $orderId)
             ->update($updateData);
+    }
+
+    protected function normalizePaidAt(array $data): ?int
+    {
+        if ($data['state'] != self::PAY_SUCCESS) {
+            return null;
+        }
+
+        $successTime = $data['successTime'] ?? time();
+
+        if (is_numeric($successTime)) {
+            $timestamp = (int)$successTime;
+            return $timestamp > 9999999999 ? (int)floor($timestamp / 1000) : $timestamp;
+        }
+
+        $timestamp = strtotime((string)$successTime);
+        return $timestamp ?: time();
     }
 
     /**
@@ -817,7 +839,7 @@ class Notify
         if (!$order) {
             throw new \Exception("订单不存在: {$orderNo}");
         }
-        if ((int)$order['pay_status'] === 1) {
+        if ((int)$order['pay_status'] === 1 && !empty($order['paid_at'])) {
             throw new \Exception('订单已支付成功，无需回调');
         }
 
@@ -1128,23 +1150,54 @@ class Notify
             FILE_APPEND
         );
 
-        if (empty($data['mchOrderNo']) || empty($data['state'])) {
-            echo 'fail';
-            exit;
+        $requiredFields = ['mchOrderNo', 'state', 'amount'];
+        foreach ($requiredFields as $field) {
+            if (!isset($data[$field]) || $data[$field] === '') {
+                Log::channel('payment')->error("SuccusPay missing field {$field}, Data: " . json_encode($data, JSON_UNESCAPED_UNICODE));
+                return $this->responseFail("Missing field: $field");
+            }
         }
 
-        // state=2 表示支付成功
-        if (intval($data['state']) === 2) {
-            Db::name('recharge_orders')
-                ->where('order_no', $data['mchOrderNo'])
-                ->where('pay_status', 0)
-                ->update([
-                    'pay_status' => 1,
-                    'updated_at' => time()
-                ]);
+        $localOrderNo = (string)$data['mchOrderNo'];
+        $platformOrderNo = (string)($data['payOrderNo'] ?? $data['orderNo'] ?? $data['platformOrderNo'] ?? $localOrderNo);
+        $data['state'] = (int)$data['state'];
+        $data['amount'] = (string)$data['amount'];
+        $data['successTime'] = $data['successTime'] ?? $data['paidTime'] ?? $data['payTime'] ?? (time() * 1000);
+
+        if (str_starts_with(strtoupper($localOrderNo), 'PAY')) {
+            $orderAmount = Db::name('recharge_orders')->where('order_no', $localOrderNo)->value('amount');
+            if ($orderAmount !== null && bccomp((string)$orderAmount, bcdiv($data['amount'], '100', 2), 2) !== 0 && bccomp((string)$orderAmount, $data['amount'], 2) === 0) {
+                $data['amount'] = bcmul($data['amount'], '100', 0);
+            }
+
+            Orders::update(
+                ['callback_data' => json_encode($data, JSON_UNESCAPED_UNICODE), 'updated_at' => time()],
+                ['order_no' => $localOrderNo]
+            );
+        } else {
+            withdrawOrders::update(
+                ['callback_data' => json_encode($data, JSON_UNESCAPED_UNICODE), 'update_time' => time()],
+                ['order_no' => $localOrderNo]
+            );
         }
 
-        echo 'success';
-        exit;
+        Db::startTrans();
+        try {
+            $this->processOrder(
+                $localOrderNo,
+                $platformOrderNo,
+                $data,
+                $request
+            );
+
+            Db::commit();
+            $this->triggerEvents();
+        } catch (\Throwable $e) {
+            Db::rollback();
+            Log::channel('payment')->error("SuccusPay order process error: {$e->getMessage()}, Trace: {$e->getTraceAsString()}, Data: " . json_encode($data, JSON_UNESCAPED_UNICODE));
+            return $this->responseFail($e->getMessage());
+        }
+
+        return $this->responseSuccess();
     }
 }

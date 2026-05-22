@@ -76,7 +76,7 @@ class Orders extends Backend
             $this->error('订单不存在');
         }
 
-        if ($order->pay_status == 1) {
+        if ($order->pay_status == 1 && !empty($order->paid_at)) {
             $this->error('订单已支付成功，无需回调');
         }
 
