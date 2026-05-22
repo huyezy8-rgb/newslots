@@ -100,10 +100,16 @@ class FirstDeposit270 extends Base
         $payChannels = is_array($config->pay_channels) ? $config->pay_channels : (get_object_vars($config->pay_channels) ?: []);
         $availableChannels = (new \app\common\service\PayGatewayService())->getAvailablePayChannels($this->userInfo['id'], $payChannels);
 
-        /*统计270活动签到，投注奖励，投注任务金额总和*/
-        $configS = \app\common\model\activity\FirstDeposit270::where(['id'=>1])->find();
-        $taskS =FirstDeposit270User::where(['user_id'=>$this->userInfo['id']])->find();
-        $AllMoney270 =  bcdiv(bcmul($taskS->amount,$configS->reward_percent,2),100,2);
+        /*未充值270活动时$AllMoney270 = 0*/
+        $ac = Db::name('activity_first_deposit_270_user')->where('user_id',$userId)->find();
+        if(empty($ac)){
+            $AllMoney270 = 0.00;
+        }else{
+            /*统计270活动签到，投注奖励，投注任务金额总和*/
+            $configS = \app\common\model\activity\FirstDeposit270::where(['id'=>1])->find();
+            $taskS =FirstDeposit270User::where(['user_id'=>$this->userInfo['id']])->find();
+            $AllMoney270 =  bcdiv(bcmul($taskS->amount,$configS->reward_percent,2),100,2);
+        }
 
         // 返回成功响应
         $this->success(__('Get recharge config success'), [
