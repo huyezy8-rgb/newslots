@@ -185,7 +185,7 @@ class Team extends Base
 
         // 获取下级佣金（该代理作为user_id获得的佣金）
         $lowerCommission = Db::name('team_commission_log')
-            ->where('user_id', $agentId)
+            ->where('source_user_id', $agentId)
             ->sum('commission');
 
         return [
