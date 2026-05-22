@@ -101,23 +101,9 @@ class FirstDeposit270 extends Base
         $availableChannels = (new \app\common\service\PayGatewayService())->getAvailablePayChannels($this->userInfo['id'], $payChannels);
 
         /*统计270活动签到，投注奖励，投注任务金额总和*/
-        $bet_num_reward = Db::name('activity_first_deposit_270_user')->where('user_id',$userId)->value('bet_num_reward');
-        $bet_test_reward = Db::name('activity_first_deposit_270_user')->where('user_id',$userId)->value('bet_test_reward');
-        $qd_reward = Db::name('activity_first_deposit_270_user')->where('user_id',$userId)->value('day_reward');
-        $data = json_decode($qd_reward, true);
-        if (!is_array($data)) {
-            $data = [];
-        }
-        $qd_total = 0;
-        foreach ($data as $item) {
-            $status = intval($item['status'] ?? 0);
-            $reward = floatval($item['reward'] ?? 0);
-
-            if ($status === 1) {
-                $qd_total += $reward;
-            }
-        }
-        $AllMoney270 = $bet_num_reward + $bet_test_reward + $qd_total;
+        $configS = \app\common\model\activity\FirstDeposit270::where(['id'=>1])->find();
+        $taskS =FirstDeposit270User::where(['user_id'=>$this->userInfo['id']])->find();
+        $AllMoney270 =  bcdiv(bcmul($taskS->amount,$configS->reward_percent,2),100,2);
 
         // 返回成功响应
         $this->success(__('Get recharge config success'), [
