@@ -104,14 +104,19 @@ class FirstDeposit270 extends Base
         $bet_num_reward = Db::name('activity_first_deposit_270_user')->where('user_id',$userId)->value('bet_num_reward');
         $bet_test_reward = Db::name('activity_first_deposit_270_user')->where('user_id',$userId)->value('bet_test_reward');
         $qd_reward = Db::name('activity_first_deposit_270_user')->where('user_id',$userId)->value('day_reward');
-        $qd_reward = json_decode($qd_reward, true);
+        $data = json_decode($qd_reward, true);
+        if (!is_array($data)) {
+            $data = [];
+        }
+        $qd_total = 0;
+        foreach ($data as $item) {
+            $status = intval($item['status'] ?? 0);
+            $reward = floatval($item['reward'] ?? 0);
 
-        // 2. 计算 status = 1 的 reward 总和（TP8 集合写法）
-        $qd_total = collect($qd_reward)
-            ->where('status', 1)
-            ->sum(function ($item) {
-                return floatval($item['reward']);
-            });
+            if ($status === 1) {
+                $qd_total += $reward;
+            }
+        }
         $AllMoney270 = $bet_num_reward + $bet_test_reward + $qd_total;
 
         // 返回成功响应
