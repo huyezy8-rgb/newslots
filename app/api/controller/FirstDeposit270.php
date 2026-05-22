@@ -181,12 +181,12 @@ class FirstDeposit270 extends Base
         if(!$task){
             $this->error(__('Not participate in activity')); // 未参与活动
         }
-        if (bccomp($task['bet_money_sum'], $task['bet_num_base'], 2) < 0) {
+        if (bccomp($task['bet_money_sum2'], $task['bet_num_base'], 2) < 0) {
             $this->error(__('Not meet receive conditions')); // 不满足领取条件
         }
 
         // 计算可领取次数（向下取整）
-        $times = (int)bcdiv($task['bet_money_sum'], $task['bet_num_base'], 0);
+        $times = (int)bcdiv($task['bet_money_sum2'], $task['bet_num_base'], 0);
 
         $amount = bcmul($config['bet_sum_reward']->reward ,$times,2);
 
@@ -225,7 +225,7 @@ class FirstDeposit270 extends Base
             //增加已领取金额
             $task->setInc('bet_num_reward',$amount);
             //减去耗损次数
-            $task->setDec('bet_money_sum',bcmul($times,$task->bet_num_base,0));
+            $task->setDec('bet_money_sum2',bcmul($times,$task->bet_num_base,0));
             if($bet_num_status) {
                 $task->bet_num_status = $bet_num_status;
                 $task->save();
