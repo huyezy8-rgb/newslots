@@ -189,7 +189,7 @@
                                 >
                                     <div class="home-popup-sort-drag-area" title="拖动排序">
                                         <el-icon class="drag-handle"><Rank /></el-icon>
-                                        <span class="order">{{ activityConfigs[getActivityKey(it)]?.popup_enabled_home ? index + 1 : '-' }}</span>
+                                        <span class="order">{{ getHomePopupOrderLabel(getActivityKey(it), index) }}</span>
                                         <div class="content">
                                             <span class="name">{{ activityOptions[getActivityKey(it)] || getActivityKey(it) }}</span>
                                             <el-tag size="small" type="info">{{ getActivityKey(it) }}</el-tag>
@@ -332,6 +332,37 @@ const homePopupOrderItems = computed(() => {
         .filter(Boolean)
 })
 
+const activityDefaultConfigs: Record<string, Partial<{
+    enabled: boolean
+    popup_enabled_home: boolean
+    popup_order_home: number
+    popup_enabled_recharge: boolean
+    popup_order_recharge: number
+    bet_multiplier: number
+}>> = {
+    bind_mobile: { enabled: true, popup_enabled_home: false, popup_order_home: 0, popup_enabled_recharge: false, popup_order_recharge: 0, bet_multiplier: 1 },
+    pop_up: { enabled: true, popup_enabled_home: true, popup_order_home: 1, popup_enabled_recharge: false, popup_order_recharge: 0, bet_multiplier: 1 },
+    red_envelope: { enabled: true, bet_multiplier: 1 },
+    rescue_funds: { enabled: true, popup_enabled_home: false, popup_order_home: 0, popup_enabled_recharge: false, popup_order_recharge: 0, bet_multiplier: 1 },
+    turntable: { enabled: true, popup_enabled_home: true, popup_order_home: 3, popup_enabled_recharge: false, popup_order_recharge: 0, bet_multiplier: 1 },
+    daygold: { enabled: true, popup_enabled_home: true, popup_order_home: 5, popup_enabled_recharge: false, popup_order_recharge: 0, bet_multiplier: 1 },
+    pwa: { enabled: true, popup_enabled_home: true, popup_order_home: 6, popup_enabled_recharge: false, popup_order_recharge: 0, bet_multiplier: 1 },
+    first_vip_49: { enabled: true, bet_multiplier: 1 },
+    deposit_vip: { enabled: true, popup_enabled_home: true, popup_order_home: 6, popup_enabled_recharge: true, popup_order_recharge: 0, bet_multiplier: 1 },
+    internal_message: { enabled: true, bet_multiplier: 1 },
+    first_deposit_daily: { enabled: true, popup_enabled_home: false, popup_order_home: 0, popup_enabled_recharge: false, popup_order_recharge: 0, bet_multiplier: 1 },
+    first_deposit_270: { enabled: true, popup_enabled_home: true, popup_order_home: 7, popup_enabled_recharge: true, popup_order_recharge: 0, bet_multiplier: 1 },
+    first_vip_6: { enabled: true, bet_multiplier: 1 },
+    first_deposit_25: { enabled: true, popup_enabled_home: true, popup_order_home: 8, popup_enabled_recharge: false, popup_order_recharge: 0, bet_multiplier: 1 },
+    pop_up_success: { enabled: true, popup_enabled_home: true, popup_order_home: 2, popup_enabled_recharge: false, popup_order_recharge: 0 },
+    turntable_success: { enabled: true, popup_enabled_home: true, popup_order_home: 4, popup_enabled_recharge: false, popup_order_recharge: 0 },
+    banlance_pop_up: { enabled: true },
+    game_vip_375: { enabled: true, bet_multiplier: 1 },
+    customer_service: { enabled: true },
+    chest: { enabled: true, bet_multiplier: 1 },
+    leaderboard: { enabled: true, bet_multiplier: 1 },
+}
+
 function toggleAll(state: boolean) {
     availableActivities.value.forEach((it: any) => {
         const key = getActivityKey(it)
@@ -342,7 +373,7 @@ function toggleAll(state: boolean) {
 
 function resetOne(key: string, it: any) {
     activityConfigs[key] = createDefaultActivityConfig(it)
-    syncHomePopupOrderToConfigs()
+    refreshHomePopupOrderKeys()
 }
 
 function resetAll() {
@@ -352,14 +383,16 @@ function resetAll() {
 function getActivityKey(it: any) { return it?.key ?? it?.type }
 
 function createDefaultActivityConfig(it: any) {
+    const key = getActivityKey(it)
+    const preset = activityDefaultConfigs[key] || {}
     const defMul = it?.option?.bet_multiplier
-    const betMul = defMul && Number(defMul) > 0 ? Number(defMul) : 1
+    const betMul = Number(preset.bet_multiplier) > 0 ? Number(preset.bet_multiplier) : defMul && Number(defMul) > 0 ? Number(defMul) : 1
     return {
-        enabled: true,
-        popup_enabled_home: false,
-        popup_enabled_recharge: false,
-        popup_order_home: 0,
-        popup_order_recharge: 0,
+        enabled: preset.enabled ?? true,
+        popup_enabled_home: preset.popup_enabled_home ?? false,
+        popup_enabled_recharge: preset.popup_enabled_recharge ?? false,
+        popup_order_home: preset.popup_order_home ?? 0,
+        popup_order_recharge: preset.popup_order_recharge ?? 0,
         bet_multiplier: betMul,
     }
 }
@@ -399,17 +432,22 @@ function refreshHomePopupOrderKeys() {
         if (orderB > 0) return 1
         return (availableIndex.get(a) ?? 0) - (availableIndex.get(b) ?? 0)
     })
-    syncHomePopupOrderToConfigs()
     nextTick(() => initHomePopupSortable())
 }
 
-function syncHomePopupOrderToConfigs() {
+function getHomePopupOrderLabel(key: string, index: number) {
+    if (!activityConfigs[key]?.popup_enabled_home) return '-'
+    return Number(activityConfigs[key]?.popup_order_home) || index + 1
+}
+
+function syncHomePopupOrderToConfigs(renumber = false) {
     homePopupOrderKeys.value.forEach((key, index) => {
         const item = availableActivities.value.find((it: any) => getActivityKey(it) === key)
         if (!item) return
         if (!activityConfigs[key]) activityConfigs[key] = createDefaultActivityConfig(item)
 
-        const nextOrder = activityConfigs[key].popup_enabled_home ? index + 1 : 0
+        const currentOrder = Number(activityConfigs[key].popup_order_home) || 0
+        const nextOrder = activityConfigs[key].popup_enabled_home ? (renumber || currentOrder <= 0 ? index + 1 : currentOrder) : 0
         if (Number(activityConfigs[key].popup_order_home) !== nextOrder) {
             activityConfigs[key].popup_order_home = nextOrder
         }
@@ -421,7 +459,7 @@ function moveHomePopupOrder(oldIndex: number, newIndex: number) {
     const [moved] = keys.splice(oldIndex, 1)
     keys.splice(newIndex, 0, moved)
     homePopupOrderKeys.value = keys
-    syncHomePopupOrderToConfigs()
+    syncHomePopupOrderToConfigs(true)
     composeActivityPayload()
 }
 
