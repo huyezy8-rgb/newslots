@@ -21,7 +21,7 @@ class Login extends Api
     {
 
         if ($this->request->isPost()) {
-                // 数据获取和验证
+            // 数据获取和验证
             $data = $this->request->only([
                 'channel_name',
                 'invite_code',
@@ -35,7 +35,7 @@ class Login extends Api
             } catch (Throwable $e) {
                 $this->error($e->getMessage());
             }
-                            // 渠道信息查找
+            // 渠道信息查找
             $channelInfo = null;
             if (!empty($data["channel_name"])) {
                 $channelInfo
@@ -64,28 +64,28 @@ class Login extends Api
                 }
             }
 
-                            // 用户查找
+            // 用户查找
             $account = \app\common\model\Account::where([
                 'channel_id' => $channelInfo->id,
                 'browser_fingerprinting' => $data["browser_fingerprinting"],
             ])->find();
 
-                            if ($account) {
-                    // 老用户事件处理
-                    // 游戏注册事件异步处理
-                    \think\facade\Queue::push(\app\job\GameRegisterJob::class, [
-                        'user_id' => $account->id
-                    ], 'game_register');
+            if ($account) {
+                // 老用户事件处理
+                // 游戏注册事件异步处理
+                \think\facade\Queue::push(\app\job\GameRegisterJob::class, [
+                    'user_id' => $account->id
+                ], 'game_register');
 
-                    // 其他事件同步处理
-                    event('InternalMessage', $account->id);
-                    event('DayGold', $account->id);
+                // 其他事件同步处理
+                event('InternalMessage', $account->id);
+                event('DayGold', $account->id);
 
-                    // 用户信息更新
+                // 用户信息更新
                 $account->last_login_time = date("Y-m-d H:i:s", time());
                 $account->save();
 
-                                   $response = $this->buildLoginResponse($account, $channelInfo);
+                $response = $this->buildLoginResponse($account, $channelInfo);
 
                 $this->success(__('Success'), $response);
             }
@@ -107,32 +107,32 @@ class Login extends Api
                 $data["rebate_rate"] = get_sys_config("default_rebate_rate")??50;
             }
 
-                            // 新用户数据准备
+            // 新用户数据准备
             $data["nickname"] = "guest".substr(bin2hex(random_bytes(16)), 0, 8);
             $data["token"]       = bin2hex(random_bytes(32 / 2));
             $data["channel_id"]       = $channelInfo->id;
             $data["reg_time"]    = date("Y-m-d H:i:s", time());
             $data["last_login_time"]    = date("Y-m-d H:i:s", time());
             $data["invite_code"] = \app\common\model\Account::getInviteCode();
-                // 设置默认值
-                $data["vip"] = 0;
-                $data["experience_wallet"] = 0;
-                $data["recharge_wallet"] = 0;
-                $data["switch_wallet"] = 0;
-                // 渠道双钱包开关：关闭时默认切换为主钱包
-                try {
-                    $doubleWalletEnabled = intval($channelInfo["double_wallet_enabled"] ?? 1);
-                    if ($doubleWalletEnabled === 0) {
-                        $data["switch_wallet"] = 1;
-                    }
-                } catch (\Throwable $e) {
-                    // 忽略异常，保持默认
+            // 设置默认值
+            $data["vip"] = 0;
+            $data["experience_wallet"] = 0;
+            $data["recharge_wallet"] = 0;
+            $data["switch_wallet"] = 0;
+            // 渠道双钱包开关：关闭时默认切换为主钱包
+            try {
+                $doubleWalletEnabled = intval($channelInfo["double_wallet_enabled"] ?? 1);
+                if ($doubleWalletEnabled === 0) {
+                    $data["switch_wallet"] = 1;
                 }
-                $data["sum_recharge"] = 0;
-                $data["sum_bet"] = 0;
-                $data["ex_withdraw_bet"] = 0;
-                $data["withdraw_available"] = 0;
-                //广告来源
+            } catch (\Throwable $e) {
+                // 忽略异常，保持默认
+            }
+            $data["sum_recharge"] = 0;
+            $data["sum_bet"] = 0;
+            $data["ex_withdraw_bet"] = 0;
+            $data["withdraw_available"] = 0;
+            //广告来源
             if($this->fbclid){
                 $data["is_ad_source"] = 1;
                 $data["fbclid"] = $this->fbclid;
@@ -140,53 +140,53 @@ class Login extends Api
                 $data["rebate_rate"] = get_sys_config("ad_rebate_rate")??50;
             }
 
-                            // 新用户注册事务
+            // 新用户注册事务
             $model = new \app\common\model\Account();
             $model->startTrans();
             try {
-                    // 用户保存
+                // 用户保存
                 $model->save($data);
 
 
 
-                                                                           // 新用户事件处理
-                    // 游戏注册事件异步处理
-                    \think\facade\Queue::push(\app\job\GameRegisterJob::class, [
-                        'user_id' => $model->id
-                    ], 'game_register');
+                // 新用户事件处理
+                // 游戏注册事件异步处理
+                \think\facade\Queue::push(\app\job\GameRegisterJob::class, [
+                    'user_id' => $model->id
+                ], 'game_register');
 
-                    // 其他事件同步处理
-                    event('InternalMessage', $model->id);
-                    event('DayGold', $model->id);
-                    
-                    // PDD邀请奖励：如果通过邀请注册，给邀请人增加邀请奖励
-                    if (isset($data["p_id"]) && $data["p_id"] > 0) {
-                        try {
-                            \app\common\service\PddService::handleInviteRegistration($data["p_id"], $model->id);
-                        } catch (\Throwable $e) {
-                            \think\facade\Log::error("PDD邀请奖励处理失败: {$e->getMessage()}");
-                        }
+                // 其他事件同步处理
+                event('InternalMessage', $model->id);
+                event('DayGold', $model->id);
+
+                // PDD邀请奖励：如果通过邀请注册，给邀请人增加邀请奖励
+                if (isset($data["p_id"]) && $data["p_id"] > 0) {
+                    try {
+                        \app\common\service\PddService::handleInviteRegistration($data["p_id"], $model->id);
+                    } catch (\Throwable $e) {
+                        \think\facade\Log::error("PDD邀请奖励处理失败: {$e->getMessage()}");
                     }
+                }
                 \think\facade\Log::info('event_source_url：'.Request::url(true));
-                    // Facebook事件异步处理
+                // Facebook事件异步处理
                 $queueResult = \think\facade\Queue::push(\app\job\FacebookConversionJob::class, [
-                        'event_data' => [
-                            'user_id' => $model->id,
-                            'event_id'=> $data["event_id"]??"",
-                            'event_type' => 'register',
-                            'event_source_url'=>Request::url(true),
-                            'custom_data' => [
-                                'method' => 'h5',
-                                'channel_name' => $channelInfo->name,
-                                'invite_code' => $data["invite_code"] ?? null,
-                                'p_id' => $data["p_id"] ?? null
-                            ],
-                            'client_ip' => $this->request->ip(),
-                            'client_user_agent' => $this->request->header('user-agent'),
-                            'fbc' => $this->fbc,
-                            'fbp' => $this->fbp,
-                        ]
-                    ], 'facebook_conversion');
+                    'event_data' => [
+                        'user_id' => $model->id,
+                        'event_id'=> $data["event_id"]??"",
+                        'event_type' => 'register',
+                        'event_source_url'=>Request::url(true),
+                        'custom_data' => [
+                            'method' => 'h5',
+                            'channel_name' => $channelInfo->name,
+                            'invite_code' => $data["invite_code"] ?? null,
+                            'p_id' => $data["p_id"] ?? null
+                        ],
+                        'client_ip' => $this->request->ip(),
+                        'client_user_agent' => $this->request->header('user-agent'),
+                        'fbc' => $this->fbc,
+                        'fbp' => $this->fbp,
+                    ]
+                ], 'facebook_conversion');
                 try {
                     $fbData = [
                         'user_id' => $model->id,
@@ -214,7 +214,7 @@ class Login extends Api
                 }
 
                 \think\facade\Log::info('队列推送结果：' . ($queueResult ? '成功' : '失败'));
-                                    // 事务提交
+                // 事务提交
 
                 $model->commit();
             } catch (Throwable $e) {
@@ -223,7 +223,7 @@ class Login extends Api
             }
 
 
-                           $response = $this->buildNewUserResponse($model, $channelInfo);
+            $response = $this->buildNewUserResponse($model, $channelInfo);
 
             $this->success(__('Success'), $response);
         }
@@ -439,9 +439,9 @@ class Login extends Api
             // 短信验证码验证
             if (config('app.debug')&& $data['sms_code'] == 123456) {
                 \think\facade\Log::info("开发环境测试模式 - 跳过验证码: " . json_encode([
-                    'mobile' => $this->maskMobile($data["mobile"]),
-                    'message' => '开发环境跳过实际短信发送'
-                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                        'mobile' => $this->maskMobile($data["mobile"]),
+                        'message' => '开发环境跳过实际短信发送'
+                    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             }else{
                 $verifyInfo = \app\common\model\SmsVerify::where([
                     "mobile" => $data["mobile"],
@@ -513,9 +513,9 @@ class Login extends Api
             // 短信验证
             if (config('app.debug')&& $data['sms_code'] == 123456) {
                 \think\facade\Log::info("开发环境测试模式 - 跳过验证码: " . json_encode([
-                    'mobile' => $this->maskMobile($data["mobile"]),
-                    'message' => '开发环境跳过实际短信发送'
-                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                        'mobile' => $this->maskMobile($data["mobile"]),
+                        'message' => '开发环境跳过实际短信发送'
+                    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             }else{
                 $verifyInfo = \app\common\model\SmsVerify::where([
                     "mobile" => $data["mobile"],

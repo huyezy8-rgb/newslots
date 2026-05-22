@@ -622,6 +622,7 @@ $this->success(__('Bind mobile successfully'), [
     "user_id" => $this->userInfo->id,
     "uid" => $this->userInfo->id,
     "account_id" => $this->userInfo->id,
+    "pdd_reward" => $this->userInfo->pdd_reward,
 
     "channel_id" => $this->userInfo->channel_id,
              "nickname"=> $this->userInfo->nickname,
