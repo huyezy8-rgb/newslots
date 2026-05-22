@@ -31,6 +31,7 @@ class DepositVip
             DepositVipUser::where('user_id', $userId)
                 ->inc('bet_num', 1)
                 ->inc('bet_money_sum', $amount)
+                ->inc('bet_money_sum2', $amount)
                 ->update();
             Log::error("DepositVip 事件 执行成功 $userId 的任务");
         } catch (\Throwable $e) {

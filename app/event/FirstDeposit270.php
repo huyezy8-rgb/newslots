@@ -29,6 +29,7 @@ class FirstDeposit270
             }
             $task->setInc('bet_num',1);
             $task->setInc('bet_money_sum',$amount);
+            $task->setInc('bet_money_sum2',$amount);
 
         } catch (\Throwable $e) {
             Log::error("FirstDeposit270s 执行异常：" . $e->getMessage());
