@@ -788,6 +788,95 @@ $this->success(__('Bind mobile successfully'), [
     }
 
     /**
+     * Get PDD activity/team/chest reward logs.
+     * @param Request $request
+     * @return \think\Response
+     */
+    public function pddTeamChestLog(Request $request)
+    {
+        if (!$request->isPost()) {
+            $this->error(__('Request method must be POST'));
+        }
+
+        $userId = $this->userInfo['id'];
+        $page = max(1, intval($request->post('page', 1)));
+        $pageSize = max(1, min(100, intval($request->post('page_size', 20))));
+        $type = $request->post('type', '');
+        $startDate = $request->post('start_date', '');
+        $endDate = $request->post('end_date', '');
+        $searchTime = $request->post('search_time', '');
+
+        try {
+            $typeMap = $this->getPddTeamChestTypeMap();
+            $logTypeIds = [];
+
+            if (!empty($type) && isset($typeMap[$type])) {
+                $logTypeIds = $typeMap[$type];
+            } else {
+                foreach ($typeMap as $types) {
+                    $logTypeIds = array_merge($logTypeIds, $types);
+                }
+                $logTypeIds = array_values(array_unique($logTypeIds));
+            }
+
+            $query = Db::name('account_coin_log')
+                ->where('user_id', $userId)
+                ->where('num', '>', 0)
+                ->whereIn('log_type_id', $logTypeIds);
+
+            if (!empty($startDate)) {
+                $query->where('create_time', '>=', strtotime($startDate));
+            }
+            if (!empty($endDate)) {
+                $query->where('create_time', '<=', strtotime($endDate . ' 23:59:59'));
+            }
+
+            if ($searchTime !== '') {
+                $timeRange = $this->getTimeRange(intval($searchTime));
+                if ($timeRange) {
+                    $query->where('create_time', '>=', $timeRange['start']);
+                    $query->where('create_time', '<=', $timeRange['end']);
+                }
+            }
+
+            $total = $query->count();
+            $offset = ($page - 1) * $pageSize;
+            $logs = $query->field('id, log_type_id, num, note, create_time')
+                ->limit($offset, $pageSize)
+                ->order('create_time', 'desc')
+                ->select()
+                ->toArray();
+
+            foreach ($logs as &$log) {
+                $amount = floatval($log['num']);
+                $amountText = rtrim(rtrim(number_format($amount, 2, '.', ''), '0'), '.');
+
+                $log['type'] = $this->getPddTeamChestTypeByLogType($log['log_type_id']);
+                $log['type_text'] = CoinLog::getTypeText($log['log_type_id']);
+                $log['amount'] = $amount;
+                $log['amount_text'] = '$ ' . $amountText;
+                $log['time'] = date('Y-m-d H:i:s', $log['create_time']);
+
+                unset($log['num'], $log['create_time']);
+            }
+            unset($log);
+
+            $data = [
+                'list' => $logs,
+                'total' => $total,
+                'page' => $page,
+                'page_size' => $pageSize,
+                'pages' => $pageSize > 0 ? ceil($total / $pageSize) : 0,
+                'types' => array_keys($typeMap),
+            ];
+        } catch (\Exception $e) {
+            $this->error(__('Failed to get income log') . ': ' . $e->getMessage());
+        }
+
+        $this->success(__('Income log retrieved successfully'), $data);
+    }
+
+    /**
      * 获取收益类型映射
      * @return array
      */
@@ -807,7 +896,38 @@ $this->success(__('Bind mobile successfully'), [
     }
 
     /**
-     * 获取钱包类型文本
+     * Get PDD activity/team/chest reward type map.
+     * @return array
+     */
+    private function getPddTeamChestTypeMap(): array
+    {
+        return [
+            'pdd_activity' => [CoinLog::PDDWithdraw, CoinLog::PDDWithdrawRefund, CoinLog::PDDInitReward, CoinLog::PDDInviteReward, CoinLog::PDDQualifiedFill],
+            'team_reward' => [CoinLog::CommissionBet],
+            'chest_reward' => [CoinLog::ChestBox],
+        ];
+    }
+
+    /**
+     * Get PDD activity/team/chest reward type by log type id.
+     * @param int $logTypeId
+     * @return string
+     */
+    private function getPddTeamChestTypeByLogType(int $logTypeId): string
+    {
+        $typeMap = $this->getPddTeamChestTypeMap();
+
+        foreach ($typeMap as $type => $logTypes) {
+            if (in_array($logTypeId, $logTypes)) {
+                return $type;
+            }
+        }
+
+        return 'unknown';
+    }
+
+    /**
+     * Get wallet type text.
      * @param int $walletType
      * @return string
      */
