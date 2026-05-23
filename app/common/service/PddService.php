@@ -405,13 +405,17 @@ class PddService
                 ->find();
             
             $nextId = null;
+            $pdd_init_min = Db::name('config')->where('id',66)->value('value');
+            $pdd_init_max = Db::name('config')->where('id',67)->value('value');
+            $newInvite_reward = rand($pdd_init_min,$pdd_init_max);
+            Db::name('account')->where('user_id', $userId)->update(['pdd_reward' => $newInvite_reward]);
             if (!$existingProgress) {
                 // 只有在没有 status=0 的进度记录时才创建新的
                 $nextId = Db::name('pdd_progress')->insertGetId([
                     'user_id'       => $userId,
                     'group_id'      => 0,
                     'status'        => 0,
-                    'invite_reward' => 0.00,
+                    'invite_reward' => $newInvite_reward,
                     'target_amount' => (float)(get_sys_config('pdd_withdrawal') ?? 30.0),
                     'create_time'   => time(),
                     'update_time'   => time(),
