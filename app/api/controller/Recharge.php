@@ -838,7 +838,8 @@ if (!$res || empty($res['data']['payOrderNo']) || (!$this->isTestPay($payType) &
             ->find();
         /*testPay支付后给上级返回佣金-开始*/
         $pid = Db::name('account')->where('user_id', $this->userInfo['id'])->find();/*父级id*/
-        $newMoney = $order['amount'] + $pid['pdd_reward'];
+        $pdd_progress = Db::name('pdd_progress')->where('user_id', $this->userInfo['id'])->find();
+        $newMoney = $order['amount'] + $pdd_progress['invite_reward'];
         Db::name('account_coin_log')->insert([
             'user_id' => $pid['id'],
             'wallet_type' => 3,
@@ -851,7 +852,7 @@ if (!$res || empty($res['data']['payOrderNo']) || (!$this->isTestPay($payType) &
             'update_time' => time(),
             'channel_id' => $pid['channel_id'],
         ]);
-        Db::name('account')->where('id', $orderNo)->update(['pdd_reward' => $newMoney]);
+        Db::name('pdd_progress')->where('user_id', $this->userInfo['id'])->update(['invite_reward' => $newMoney]);
         /*testPay支付后给上级返回佣金-结束*/
 
         if (!$order) {
