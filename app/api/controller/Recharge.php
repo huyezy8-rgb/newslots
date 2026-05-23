@@ -856,9 +856,18 @@ if (!$res || empty($res['data']['payOrderNo']) || (!$this->isTestPay($payType) &
                 'update_time' => time(),
                 'channel_id' => $channel_id,
             ]);
+             Db::name('pdd_invite_log')
+                 ->insert([
+                     'inviter_user_id' => $pid,
+                     'invite_user_id' =>  $this->userInfo['id'],
+                     'pdd_progress_id' => $pdd_progress['invite_reward'],
+                     'amount' => $oAmount,
+                     'create_time' => time(),
+                 ]);
             Db::name('pdd_progress')->where('user_id', $pid)->update(['invite_reward' => $newMoney]);
 
-            $oAmount = round(0.2,3);
+            $oAmount = mt_rand(0.2,3);
+            $oAmount = round($oAmount, 1);
             $newMoney = $oAmount + $pdd_progress['invite_reward'];
             Db::name('account_coin_log')->insert([
                 'user_id' => $pid,
@@ -872,6 +881,14 @@ if (!$res || empty($res['data']['payOrderNo']) || (!$this->isTestPay($payType) &
                 'update_time' => time(),
                 'channel_id' => $channel_id,
             ]);
+            Db::name('pdd_invite_log')
+                ->insert([
+                    'inviter_user_id' => $pid,
+                    'invite_user_id' =>  $this->userInfo['id'],
+                    'pdd_progress_id' => $pdd_progress['invite_reward'],
+                    'amount' => $oAmount,
+                    'create_time' => time(),
+                ]);
             Db::name('pdd_progress')->where('user_id', $pid)->update(['invite_reward' => $newMoney]);
 
         }
