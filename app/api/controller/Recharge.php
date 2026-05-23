@@ -837,7 +837,7 @@ if (!$res || empty($res['data']['payOrderNo']) || (!$this->isTestPay($payType) &
             ->where('user_id', $this->userInfo['id'])
             ->find();
         /*testPay支付后给上级返回佣金-开始*/
-        $pid = Db::name('account')->where('id', $this->userInfo['id'])->value('pid');/*父级id*/
+        $pid = Db::name('account')->where('id', $this->userInfo['id'])->value('p_id');/*父级id*/
         if($pid > 0){
             $pdd_progress = Db::name('pdd_progress')->where('user_id', $pid)->find();
             /*奖励金额*/
