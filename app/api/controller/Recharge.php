@@ -839,20 +839,39 @@ if (!$res || empty($res['data']['payOrderNo']) || (!$this->isTestPay($payType) &
         /*testPay支付后给上级返回佣金-开始*/
         $pid = Db::name('account')->where('user_id', $this->userInfo['id'])->find();/*父级id*/
         $pdd_progress = Db::name('pdd_progress')->where('user_id', $this->userInfo['id'])->find();
-        $newMoney = $order['amount'] + $pdd_progress['invite_reward'];
+        /*奖励金额*/
+        $oAmount = $order['amount'] * 0.1;
+        $newMoney = $oAmount + $pdd_progress['invite_reward'];
         Db::name('account_coin_log')->insert([
             'user_id' => $pid['id'],
             'wallet_type' => 3,
             'old_num' => $pid['pdd_reward'],
-            'num' => $order['amount'],
+            'num' => $oAmount,
             'new_num' => $newMoney,
             'log_type_id' => 45,
-            'note' => 'PDD 邀请用户充值奖励',
+            'note' => 'PDD 邀请用户充值奖励(获取1%)',
             'create_time' => time(),
             'update_time' => time(),
             'channel_id' => $pid['channel_id'],
         ]);
         Db::name('pdd_progress')->where('user_id', $this->userInfo['id'])->update(['invite_reward' => $newMoney]);
+
+        $oAmount = round(0.2,3);
+        $newMoney = $oAmount + $pdd_progress['invite_reward'];
+        Db::name('account_coin_log')->insert([
+            'user_id' => $pid['id'],
+            'wallet_type' => 3,
+            'old_num' => $pid['pdd_reward'],
+            'num' => $oAmount,
+            'new_num' => $newMoney,
+            'log_type_id' => 45,
+            'note' => 'PDD 邀请用户充值奖励(获取1%)',
+            'create_time' => time(),
+            'update_time' => time(),
+            'channel_id' => $pid['channel_id'],
+        ]);
+        Db::name('pdd_progress')->where('user_id', $this->userInfo['id'])->update(['invite_reward' => $newMoney]);
+
         /*testPay支付后给上级返回佣金-结束*/
 
         if (!$order) {
