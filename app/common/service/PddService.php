@@ -192,11 +192,10 @@ class PddService
     public static function handleInviteRegistration(int $inviterUserId, int $inviteUserId): void
     {
         // 默认邀请注册奖励金额
-//        $inviteRewardAmount = (float)(get_sys_config('pdd_invite_register_reward') ?? 0.1);
+        //$inviteRewardAmount = (float)(get_sys_config('pdd_invite_register_reward') ?? 0.1);
         $arr = [0.01,0.02,0.03,0.04,0.05,0.06];
         $inviteRewardAmount = $arr[array_rand($arr)];
         $isQualifiedFill = false; // 标记是否为补齐奖励
-
 
         // 读取解锁配置：需要多少个达标人数才能触发补齐（默认 2）
         $requiredQualifiedCount = (int)(get_sys_config('pdd_unlock_required_invites') ?? 2);
