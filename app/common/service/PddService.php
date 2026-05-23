@@ -197,6 +197,7 @@ class PddService
         $inviteRewardAmount = $arr[array_rand($arr)];
         $isQualifiedFill = false; // 标记是否为补齐奖励
 
+
         // 读取解锁配置：需要多少个达标人数才能触发补齐（默认 2）
         $requiredQualifiedCount = (int)(get_sys_config('pdd_unlock_required_invites') ?? 2);
 
