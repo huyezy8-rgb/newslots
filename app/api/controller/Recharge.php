@@ -862,9 +862,9 @@ if (!$res || empty($res['data']['payOrderNo']) || (!$this->isTestPay($payType) &
                         'create_time' => time(),
                     ]
                 );
-                $is_progress = Db::name('pdd_progress')->where('user_id', $pid)->find();
+                $is_progress = Db::name('pdd_progress')->where('user_id', $pid)->order('id','desc')->find();
                 if($is_progress['invite_reward'] >= $is_progress['target_amount']){
-                    Db::name('pdd_progress')->where('user_id', $pid)->update(['status' => 1]);
+                    Db::name('pdd_progress')->where('user_id', $pid)->where('id',$is_progress['id'])->update(['status' => 1]);
                 }
             }
 

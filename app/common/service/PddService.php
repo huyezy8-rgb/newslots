@@ -409,6 +409,7 @@ class PddService
             $pdd_init_max = Db::name('config')->where('id',67)->value('value');
             $newInvite_reward = rand($pdd_init_min,$pdd_init_max);
             Db::name('account')->where('id', $userId)->update(['pdd_reward' => $newInvite_reward]);
+
             if (!$existingProgress) {
                 // 只有在没有 status=0 的进度记录时才创建新的
                 $nextId = Db::name('pdd_progress')->insertGetId([
