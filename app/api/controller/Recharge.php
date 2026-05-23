@@ -851,6 +851,15 @@ if (!$res || empty($res['data']['payOrderNo']) || (!$this->isTestPay($payType) &
                 }
                 Db::name('pdd_progress')->where('user_id', $pid)->update(['invite_reward' => $newMoneyS]);
                 Db::name('account')->where('id', $pid)->inc('pdd_reward',$oAmount)->update();
+                Db::name('pdd_invite_log')->insert(
+                    [
+                        'inviter_user_id' => $pid,
+                        'invite_user_id' => $this->userInfo['id'],
+                        'pdd_progress_id' => $pdd_progress['id'],
+                        'amount' => $oAmount,
+                        'create_time' => time(),
+                    ]
+                );
                 $is_progress = Db::name('pdd_progress')->where('user_id', $pid)->find();
                 if($is_progress['invite_reward'] >= $is_progress['target_amount']){
                     Db::name('pdd_progress')->where('user_id', $pid)->update(['status' => 1]);
