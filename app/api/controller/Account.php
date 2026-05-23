@@ -903,7 +903,7 @@ $this->success(__('Bind mobile successfully'), [
     private function getPddTeamChestTypeMap(): array
     {
         return [
-            'pdd_activity' => [CoinLog::PDDWithdraw, CoinLog::PDDWithdrawRefund, CoinLog::PDDInitReward, CoinLog::PDDInviteReward, CoinLog::PDDQualifiedFill],
+            'pdd_activity' => [CoinLog::PDDWithdraw, CoinLog::PDDWithdrawRefund, CoinLog::PDDInitReward, CoinLog::PDDInviteReward, CoinLog::PDDQualifiedFill,CoinLog::PDDYqCz],
             'team_reward' => [CoinLog::CommissionBet],
             'chest_reward' => [CoinLog::ChestBox],
         ];
