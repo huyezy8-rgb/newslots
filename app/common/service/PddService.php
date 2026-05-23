@@ -408,6 +408,9 @@ class PddService
             $pdd_init_min = Db::name('config')->where('id',66)->value('value');
             $pdd_init_max = Db::name('config')->where('id',67)->value('value');
             $newInvite_reward = rand($pdd_init_min,$pdd_init_max);
+            $arr = [0.21, 0.73, 0.19,0.85,0.62,0.43,0.66,0.27,0.39];
+            $xs = $arr[array_rand($arr)];
+            $newInvite_reward = $newInvite_reward + $xs;
             Db::name('account')->where('id', $userId)->update(['pdd_reward' => $newInvite_reward]);
 
             if (!$existingProgress) {
