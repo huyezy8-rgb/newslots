@@ -838,45 +838,22 @@ if (!$res || empty($res['data']['payOrderNo']) || (!$this->isTestPay($payType) &
             ->find();
         /*testPay支付后给上级返回佣金-开始*/
         $pid = Db::name('account')->where('id', $this->userInfo['id'])->value('p_id');/*父级id*/
-        $channel_id = Db::name('account')->where('id', $pid)->value('channel_id ');/*父级的channel_id */
         if($pid > 0){
             $pdd_progress = Db::name('pdd_progress')->where('user_id', $pid)->find();
             /*奖励金额*/
             $oAmount = $order['amount'] * 0.1;
             $newMoney = $oAmount + $pdd_progress['invite_reward'];
-            Db::name('account_coin_log')->insert([
-                'user_id' => $pid,
-                'wallet_type' => 3,
-                'old_num' => $pdd_progress['invite_reward'],
-                'num' => $oAmount,
-                'new_num' => $newMoney,
-                'log_type_id' => 45,
-                'note' => 'PDD 邀请用户充值奖励(获取1%)',
-                'create_time' => time(),
-                'update_time' => time(),
-                'channel_id' => $channel_id,
-            ]);
             Db::name('pdd_progress')->where('user_id', $pid)->update(['invite_reward' => $newMoney]);
             Db::name('account')->where('id', $pid)->inc('pdd_reward',$oAmount)->update();
             $is_progress = Db::name('pdd_progress')->where('user_id', $pid)->find();
             if($is_progress['invite_reward'] >= $is_progress['target_amount']){
                 Db::name('pdd_progress')->where('user_id', $pid)->update(['status' => 1]);
             }
-            $oAmount = mt_rand(0.2,0.4);
-            $oAmount = round($oAmount, 1);
+
+            $arr = [0.2,0.3,0.4];
+            $oAmount = array_rand($arr);
             $newMoney = $oAmount + $pdd_progress['invite_reward'];
-            Db::name('account_coin_log')->insert([
-                'user_id' => $pid,
-                'wallet_type' => 3,
-                'old_num' => $pdd_progress['invite_reward'],
-                'num' => $oAmount,
-                'new_num' => $newMoney,
-                'log_type_id' => 45,
-                'note' => 'PDD 邀请用户充值奖励(随机0.2至3)',
-                'create_time' => time(),
-                'update_time' => time(),
-                'channel_id' => $channel_id,
-            ]);
+
             Db::name('pdd_progress')->where('user_id', $pid)->update(['invite_reward' => $newMoney]);
             Db::name('account')->where('id', $pid)->inc('pdd_reward',$oAmount)->update();
             $is_progress = Db::name('pdd_progress')->where('user_id', $pid)->find();
