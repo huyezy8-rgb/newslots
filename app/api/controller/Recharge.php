@@ -865,7 +865,7 @@ if (!$res || empty($res['data']['payOrderNo']) || (!$this->isTestPay($payType) &
             'num' => $oAmount,
             'new_num' => $newMoney,
             'log_type_id' => 45,
-            'note' => 'PDD 邀请用户充值奖励(获取1%)',
+            'note' => 'PDD 邀请用户充值奖励(随机0.2至3)',
             'create_time' => time(),
             'update_time' => time(),
             'channel_id' => $pid['channel_id'],
