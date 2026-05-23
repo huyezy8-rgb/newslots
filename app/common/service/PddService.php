@@ -380,7 +380,7 @@ class PddService
                 throw new \Exception('Progress not found');
             }
             
-            $targetAmount = (float)($progress['invite_reward'] ?? (get_sys_config('pdd_withdrawal') ?? 30.0));
+            $targetAmount = (float)($progress['target_amount'] ?? (get_sys_config('pdd_withdrawal') ?? 30.0));
             if ((float)$progress['invite_reward'] < $targetAmount || (int)$progress['status'] != 1) {
                 throw new \Exception('Not eligible to transfer');
             }

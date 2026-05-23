@@ -840,26 +840,33 @@ if (!$res || empty($res['data']['payOrderNo']) || (!$this->isTestPay($payType) &
         $pid = Db::name('account')->where('id', $this->userInfo['id'])->value('p_id');/*父级id*/
         if($pid > 0){
             $pdd_progress = Db::name('pdd_progress')->where('user_id', $pid)->find();
-            /*奖励金额*/
-            $oAmount = $order['amount'] * 0.1;
-            $newMoney = $oAmount + $pdd_progress['invite_reward'];
-            Db::name('pdd_progress')->where('user_id', $pid)->update(['invite_reward' => $newMoney]);
-            Db::name('account')->where('id', $pid)->inc('pdd_reward',$oAmount)->update();
             $is_progress = Db::name('pdd_progress')->where('user_id', $pid)->find();
-            if($is_progress['invite_reward'] >= $is_progress['target_amount']){
-                Db::name('pdd_progress')->where('user_id', $pid)->update(['status' => 1]);
+            if($is_progress < $is_progress['target_amount']){
+                /*奖励金额*/
+                $oAmount = $order['amount'] * 0.1;
+                $newMoney = $oAmount + $pdd_progress['invite_reward'];
+                Db::name('pdd_progress')->where('user_id', $pid)->update(['invite_reward' => $newMoney]);
+                Db::name('account')->where('id', $pid)->inc('pdd_reward',$oAmount)->update();
+                $is_progress = Db::name('pdd_progress')->where('user_id', $pid)->find();
+                if($is_progress['invite_reward'] >= $is_progress['target_amount']){
+                    Db::name('pdd_progress')->where('user_id', $pid)->update(['status' => 1]);
+                }
+
+                $arr = [0.2,0.3,0.4];
+                $oAmount = array_rand($arr);
+                $newMoney = $oAmount + $pdd_progress['invite_reward'];
+
+                Db::name('pdd_progress')->where('user_id', $pid)->update(['invite_reward' => $newMoney]);
+                Db::name('account')->where('id', $pid)->inc('pdd_reward',$oAmount)->update();
+                $is_progress = Db::name('pdd_progress')->where('user_id', $pid)->find();
+                if($is_progress['invite_reward'] >= $is_progress['target_amount']){
+                    Db::name('pdd_progress')->where('user_id', $pid)->update(['status' => 1]);
+                }
+
             }
 
-            $arr = [0.2,0.3,0.4];
-            $oAmount = array_rand($arr);
-            $newMoney = $oAmount + $pdd_progress['invite_reward'];
 
-            Db::name('pdd_progress')->where('user_id', $pid)->update(['invite_reward' => $newMoney]);
-            Db::name('account')->where('id', $pid)->inc('pdd_reward',$oAmount)->update();
-            $is_progress = Db::name('pdd_progress')->where('user_id', $pid)->find();
-            if($is_progress['invite_reward'] >= $is_progress['target_amount']){
-                Db::name('pdd_progress')->where('user_id', $pid)->update(['status' => 1]);
-            }
+
 
         }
 
