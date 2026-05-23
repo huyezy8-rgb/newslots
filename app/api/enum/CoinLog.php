@@ -57,6 +57,8 @@ class CoinLog
     const PDDInviteReward = 40;       // PDD 邀请注册奖励（累加）
     const PDDQualifiedFill = 41;      // PDD 达标补齐奖励（补到目标值）
 
+    const PDDYqCz = 45;      // PDD 邀请的用户充值 奖励
+
     // Jackpot 提现（转入充值钱包）
     const JackpotWithdraw = 42;       // Jackpot 提现入账
     

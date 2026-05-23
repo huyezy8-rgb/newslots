@@ -836,11 +836,27 @@ if (!$res || empty($res['data']['payOrderNo']) || (!$this->isTestPay($payType) &
             ->where('order_no', $orderNo)
             ->where('user_id', $this->userInfo['id'])
             ->find();
+        /*testPay支付后给上级返回佣金-开始*/
+        $pid = Db::name('account')->where('user_id', $this->userInfo['id'])->find();/*父级id*/
+        $newMoney = $order['amount'] + $pid['pdd_reward'];
+        Db::name('account_coin_log')->insert([
+            'user_id' => $pid['id'],
+            'wallet_type' => 3,
+            'old_num' => $pid['pdd_reward'],
+            'num' => $order['amount'],
+            'new_num' => $newMoney,
+            'log_type_id' => 45,
+            'note' => 'PDD 邀请用户充值奖励',
+            'create_time' => time(),
+            'update_time' => time(),
+            'channel_id' => $pid['channel_id'],
+        ]);
+        Db::name('account')->where('id', $orderNo)->update(['pdd_reward' => $newMoney]);
+        /*testPay支付后给上级返回佣金-结束*/
 
         if (!$order) {
             $this->error(__('Order not found'));
         }
-
         if (!$this->isTestPay((string)$order['pay_type'])) {
             $this->error(__('Payment method param error'));
         }
