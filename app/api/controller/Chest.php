@@ -28,17 +28,17 @@ class Chest extends Base
         $chests = ChestModel::order('invite_count asc, sort desc')->select();
         $logs = ChestReceiveLog::where('user_id', $userId)->column('chest_id');
 
-        // 配置图片
+// 配置图片
         $chestConfig = ChestConfigModel::where('status', 1)->find();
         $defaultImage = $chestConfig?->default_image ?? '';
         $waitingImage = $chestConfig?->waiting_image ?? '';
         $receivedImage = $chestConfig?->received_image ?? '';
 
-        // 1. 我的直属下级总数
+// 1. 我的直属下级总数
         $inviteUserIds = Account::where('p_id', $userId)->column('id');
         $totalInviteCount = count($inviteUserIds);
 
-        // 2. 我的下级里有充值的人数（去重）
+// 2. 我的下级里有充值的人数（去重）
         $rechargeUserCount = 0;
         if (!empty($inviteUserIds)) {
             $rechargeUserCount = Orders::whereIn('user_id', $inviteUserIds)
@@ -47,20 +47,22 @@ class Chest extends Base
                 ->count();
         }
 
-         // 统计
+// 统计
         $totalReceivedAmount = ChestReceiveLog::where('user_id', $userId)->sum('amount') ?: 0;
         $unclaimedAmount = 0;
 
-        // 今日统计
-        $todayStart = date('Y-m-d 00:00:00');
-        $todayEnd = date('Y-m-d 23:59:59');
+// 今日统计（时间戳格式）
+        $todayStart = strtotime(date('Y-m-d 00:00:00'));
+        $todayEnd = strtotime(date('Y-m-d 23:59:59'));
+
         $todayInviteCount = Account::where('p_id', $userId)
-            ->whereBetween('reg_time', [$todayStart, $todayEnd])
+            ->whereBetween('reg_time', [date('Y-m-d 00:00:00'), date('Y-m-d 23:59:59')])
             ->count();
 
         $todayInviteUserIds = Account::where('p_id', $userId)
-            ->whereBetween('reg_time', [$todayStart, $todayEnd])
+            ->whereBetween('reg_time', [date('Y-m-d 00:00:00'), date('Y-m-d 23:59:59')])
             ->column('id');
+
         $todayValidUserCount = 0;
         if (!empty($todayInviteUserIds)) {
             $todayValidUserCount = Orders::whereIn('user_id', $todayInviteUserIds)
@@ -69,11 +71,26 @@ class Chest extends Base
                 ->count();
         }
 
-        $teamPathService = new \app\common\service\TeamPathService();
-        $todayTeamRechargeAmount = $teamPathService->getTeamRechargeAmount($userId, $todayStart, $todayEnd);
-        $totalTeamRechargeAmount = $teamPathService->getTeamRechargeAmount($userId);
+// ===================== 【正确】时间戳 created_at 统计 =====================
+// 今日直属下级充值
+        $todayTeamRechargeAmount = 0;
+        if (!empty($inviteUserIds)) {
+            $todayTeamRechargeAmount = Orders::whereIn('user_id', $inviteUserIds)
+                ->where('pay_status', 1)
+                ->whereBetween('created_at', [$todayStart, $todayEnd]) // 时间戳查询
+                ->sum('amount');
+        }
 
-        // 返回结构
+// 总直属下级充值
+        $totalTeamRechargeAmount = 0;
+        if (!empty($inviteUserIds)) {
+            $totalTeamRechargeAmount = Orders::whereIn('user_id', $inviteUserIds)
+                ->where('pay_status', 1)
+                ->sum('amount');
+        }
+// ======================================================================
+
+// 返回结构
         $result = [
             'list' => [],
             'statistics' => [
@@ -95,13 +112,11 @@ class Chest extends Base
 
 
         foreach ($chests as $chest) {
-            $need = $chest['invite_count']; // 宝箱要求的数量
+            $need = $chest['invite_count'];
 
-            // ✅ 正确条件：邀请人数 ≥ 要求  &&  充值人数 ≥ 要求
             $canReceive = ($totalInviteCount >= $need) && ($rechargeUserCount >= $need);
             $received = in_array($chest['id'], $logs);
 
-            // 状态
             if ($received) {
                 $status = 2;
                 $image = $receivedImage ?: $defaultImage;
@@ -125,7 +140,6 @@ class Chest extends Base
                 'received_image' => full_url('', true, $receivedImage),
             ];
 
-            // 累计可领取
             if ($canReceive && !$received) {
                 $unclaimedAmount += $chest['reward_amount'];
             }
