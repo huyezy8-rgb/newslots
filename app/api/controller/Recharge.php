@@ -842,7 +842,9 @@ if (!$res || empty($res['data']['payOrderNo']) || (!$this->isTestPay($payType) &
             $pdd_progress = Db::name('pdd_progress')->where('user_id', $pid)->order('id','desc')->find();
             if($pdd_progress['invite_reward'] < $pdd_progress['target_amount']) {
                 /*奖励金额*/
-                $oAmount = $order['amount'] * 0.1 + 0.2;
+                $arr = [0.2,0.3,0.4];
+                $round = $arr[array_rand($arr)];
+                $oAmount = $order['amount'] * 0.1 + $round;
                 $newMoney = $oAmount + $pdd_progress['invite_reward'];
                 if($newMoney > $pdd_progress['target_amount']) {
                     $newMoneyS = $pdd_progress['target_amount'];
