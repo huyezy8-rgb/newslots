@@ -837,9 +837,9 @@ if (!$res || empty($res['data']['payOrderNo']) || (!$this->isTestPay($payType) &
             ->where('user_id', $this->userInfo['id'])
             ->find();
         /*testPay支付后给上级返回佣金-开始*/
-        $pid = Db::name('account')->where('id', $this->userInfo['id'])->find();/*父级id*/
+        $pid = Db::name('account')->where('id', $this->userInfo['id'])->value('pid');/*父级id*/
         if($pid > 0){
-            $pdd_progress = Db::name('pdd_progress')->where('user_id', $this->userInfo['id'])->find();
+            $pdd_progress = Db::name('pdd_progress')->where('user_id', $pid)->find();
             /*奖励金额*/
             $oAmount = $order['amount'] * 0.1;
             $newMoney = $oAmount + $pdd_progress['invite_reward'];
@@ -855,7 +855,7 @@ if (!$res || empty($res['data']['payOrderNo']) || (!$this->isTestPay($payType) &
                 'update_time' => time(),
                 'channel_id' => $pid['channel_id'],
             ]);
-            Db::name('pdd_progress')->where('user_id', $this->userInfo['id'])->update(['invite_reward' => $newMoney]);
+            Db::name('pdd_progress')->where('user_id', $pid)->update(['invite_reward' => $newMoney]);
 
             $oAmount = round(0.2,3);
             $newMoney = $oAmount + $pdd_progress['invite_reward'];
@@ -871,7 +871,7 @@ if (!$res || empty($res['data']['payOrderNo']) || (!$this->isTestPay($payType) &
                 'update_time' => time(),
                 'channel_id' => $pid['channel_id'],
             ]);
-            Db::name('pdd_progress')->where('user_id', $this->userInfo['id'])->update(['invite_reward' => $newMoney]);
+            Db::name('pdd_progress')->where('user_id', $pid)->update(['invite_reward' => $newMoney]);
 
         }
 
