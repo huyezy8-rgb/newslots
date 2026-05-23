@@ -25,90 +25,83 @@ class Chest extends Base
     public function list()
     {
         $userId = $this->userInfo['id'];
-        $chests = ChestModel::order('invite_count asc,recharge_amount asc,sort desc')->select();
+        $chests = ChestModel::order('invite_count asc, sort desc')->select();
         $logs = ChestReceiveLog::where('user_id', $userId)->column('chest_id');
 
-        // 获取宝箱活动配置中的图片数据
+        // 配置图片
         $chestConfig = ChestConfigModel::where('status', 1)->find();
-        $defaultImage = $chestConfig ? $chestConfig->default_image : '';
-        $waitingImage = $chestConfig ? $chestConfig->waiting_image : '';
-        $receivedImage = $chestConfig ? $chestConfig->received_image : '';
-        // 查询用户充值总额
-        $recharge = Orders::where('user_id', $userId)->where('pay_status', 1)->sum('amount');
-        // 查询用户邀请有效用户数
-        $user = Account::find($userId);
-        $inviteCount = $user->valid_invite_count ?? 0;
+        $defaultImage = $chestConfig?->default_image ?? '';
+        $waitingImage = $chestConfig?->waiting_image ?? '';
+        $receivedImage = $chestConfig?->received_image ?? '';
 
-        // 计算未领取金额（一键领取时能领取的金额）
-        $unclaimedAmount = 0;
-        // $canReceiveChests = [];
-        foreach ($chests as $chest) {
-            $canReceive = $recharge >= $chest['recharge_amount'] && $inviteCount >= $chest['invite_count'];
-            $notReceived = !in_array($chest['id'], $logs);
-            if ($canReceive && $notReceived) {
-                $unclaimedAmount += $chest['reward_amount'];
-                // $canReceiveChests[] = $chest;
-            }
+        // 1. 我的直属下级总数
+        $inviteUserIds = Account::where('p_id', $userId)->column('id');
+        $totalInviteCount = count($inviteUserIds);
+
+        // 2. 我的下级里有充值的人数（去重）
+        $rechargeUserCount = 0;
+        if (!empty($inviteUserIds)) {
+            $rechargeUserCount = Orders::whereIn('user_id', $inviteUserIds)
+                ->where('pay_status', 1)
+                ->group('user_id')
+                ->count();
         }
 
-        // 计算总领取金额
-        $totalReceivedAmount = ChestReceiveLog::where('user_id', $userId)->sum('amount');
+         // 统计
+        $totalReceivedAmount = ChestReceiveLog::where('user_id', $userId)->sum('amount') ?: 0;
+        $unclaimedAmount = 0;
 
-        // 获取今日时间范围
-        $todayStart = strtotime(date('Y-m-d 00:00:00'));
-        $todayEnd = strtotime(date('Y-m-d 23:59:59'));
-
-        // 今日邀请人数（今日注册的直属下级）
+        // 今日统计
+        $todayStart = date('Y-m-d 00:00:00');
+        $todayEnd = date('Y-m-d 23:59:59');
         $todayInviteCount = Account::where('p_id', $userId)
-            ->where('reg_time', '>=', date('Y-m-d 00:00:00'))
-            ->where('reg_time', '<=', date('Y-m-d 23:59:59'))
+            ->whereBetween('reg_time', [$todayStart, $todayEnd])
             ->count();
 
-        // 今日有效用户人数（今日达到充值门槛的直属下级）
-        $todayValidUserCount = Db::name('invite_valid_log')
-            ->where('pid', $userId)
-            ->where('add_time', '>=', $todayStart)
-            ->where('add_time', '<=', $todayEnd)
-            ->count();
+        $todayInviteUserIds = Account::where('p_id', $userId)
+            ->whereBetween('reg_time', [$todayStart, $todayEnd])
+            ->column('id');
+        $todayValidUserCount = 0;
+        if (!empty($todayInviteUserIds)) {
+            $todayValidUserCount = Orders::whereIn('user_id', $todayInviteUserIds)
+                ->where('pay_status', 1)
+                ->group('user_id')
+                ->count();
+        }
 
-        // 今日下级用户充值总金额
         $teamPathService = new \app\common\service\TeamPathService();
-        $todayTeamRechargeAmount = $teamPathService->getTeamRechargeAmount($userId, date('Y-m-d 00:00:00'), date('Y-m-d 23:59:59'));
-
-        // 总的邀请人数（所有直属下级）
-        $totalInviteCount = Account::where('p_id', $userId)->count();
-
-        // 总的有效用户人数（所有达到充值门槛的直属下级）
-        $totalValidUserCount = Db::name('invite_valid_log')
-            ->where('pid', $userId)
-            ->count();
-
-        // 总的下级用户充值总金额
+        $todayTeamRechargeAmount = $teamPathService->getTeamRechargeAmount($userId, $todayStart, $todayEnd);
         $totalTeamRechargeAmount = $teamPathService->getTeamRechargeAmount($userId);
 
+        // 返回结构
         $result = [
             'list' => [],
             'statistics' => [
-                'unclaimed_amount' => $unclaimedAmount, // 未领取金额
-                'total_received_amount' => $totalReceivedAmount, // 总领取金额
-                'banner_image' => $chestConfig ? full_url('', true, $chestConfig->banner_image) : '', // 宝箱活动配置中的图片数据
+                'unclaimed_amount' => $unclaimedAmount,
+                'total_received_amount' => $totalReceivedAmount,
+                'banner_image' => $chestConfig ? full_url('', true, $chestConfig->banner_image) : '',
                 'today' => [
-                    'invite_count' => $todayInviteCount, // 今日邀请人数
-                    'valid_user_count' => $todayValidUserCount, // 今日有效用户人数
-                    'team_recharge_amount' => $todayTeamRechargeAmount, // 今日下级用户充值总金额
+                    'invite_count' => $todayInviteCount,
+                    'valid_user_count' => $todayValidUserCount,
+                    'team_recharge_amount' => $todayTeamRechargeAmount,
                 ],
                 'total' => [
-                    'invite_count' => $totalInviteCount, // 总邀请人数
-                    'valid_user_count' => $totalValidUserCount, // 总有效用户人数
-                    'team_recharge_amount' => $totalTeamRechargeAmount, // 总下级用户充值总金额
+                    'invite_count' => $totalInviteCount,
+                    'valid_user_count' => $rechargeUserCount,
+                    'team_recharge_amount' => $totalTeamRechargeAmount,
                 ]
             ]
         ];
 
+
         foreach ($chests as $chest) {
-            $canReceive = $recharge >= $chest['recharge_amount'] && $totalValidUserCount >= $chest['invite_count'];
+            $need = $chest['invite_count']; // 宝箱要求的数量
+
+            // ✅ 正确条件：邀请人数 ≥ 要求  &&  充值人数 ≥ 要求
+            $canReceive = ($totalInviteCount >= $need) && ($rechargeUserCount >= $need);
             $received = in_array($chest['id'], $logs);
-            // 状态图片逻辑 - 使用配置表中的图片
+
+            // 状态
             if ($received) {
                 $status = 2;
                 $image = $receivedImage ?: $defaultImage;
@@ -119,20 +112,26 @@ class Chest extends Base
                 $status = 0;
                 $image = $defaultImage;
             }
+
             $result['list'][] = [
                 'id' => $chest['id'],
                 'name' => $chest['name'],
-                'recharge_amount' => $chest['recharge_amount'],
                 'invite_count' => $chest['invite_count'],
                 'reward_amount' => $chest['reward_amount'],
-                'sort' => $chest['sort'],
                 'status' => $status,
-                'image' => $image,
+                'image' => full_url('', true, $image),
                 'default_image' => full_url('', true, $defaultImage),
                 'waiting_image' => full_url('', true, $waitingImage),
                 'received_image' => full_url('', true, $receivedImage),
             ];
+
+            // 累计可领取
+            if ($canReceive && !$received) {
+                $unclaimedAmount += $chest['reward_amount'];
+            }
         }
+
+        $result['statistics']['unclaimed_amount'] = $unclaimedAmount;
 
         $this->success(__('Get chest list success'), $result);
     }
@@ -144,19 +143,33 @@ class Chest extends Base
         $chestId = Request::param('chest_id');
         $chest = ChestModel::find($chestId);
         if (!$chest) $this->error(__('Chest not exist'));
-        // 查询用户充值总额
-        $recharge = Orders::where('user_id', $userId)->where('pay_status', 1)->sum('amount');
-        // $user = Account::find($userId);
-        $inviteCount = Db::name('invite_valid_log')
-            ->where('pid', $userId)
-            ->count() ?? 0;
-        if ($recharge < $chest['recharge_amount'] || $inviteCount < $chest['invite_count']) {
+
+
+        // 1. 获取【我的直属邀请总人数】
+        $totalInviteCount = Account::where('p_id', $userId)->count() ?? 0;
+
+        // 2. 获取【我的下级有充值的人数】
+        $inviteUserIds = Account::where('p_id', $userId)->column('id');
+        $rechargeUserCount = 0;
+        if (!empty($inviteUserIds)) {
+            $rechargeUserCount = Orders::whereIn('user_id', $inviteUserIds)
+                ->where('pay_status', 1)
+                ->group('user_id')
+                ->count();
+        }
+
+        // 3. 新判断条件：邀请人数 和 充值人数 都 >= 宝箱要求
+        $need = $chest['invite_count'];
+        if ($totalInviteCount < $need || $rechargeUserCount < $need) {
             $this->error(__('Not meet receive conditions'));
         }
+
+
         // 检查是否已领取
         if (ChestReceiveLog::where(['user_id' => $userId, 'chest_id' => $chestId])->find()) {
             $this->error(__('Already received'));
         }
+
         // 记录领取和发放奖励金额，事务处理
         Db::startTrans();
         try {
@@ -174,7 +187,7 @@ class Chest extends Base
                 userId: $this->userInfo['id'],
                 amount: $chest['reward_amount'],
                 walletType: 1,
-                logTypeId: $logTypeId,  // ✅ 使用定义的常量
+                logTypeId: $logTypeId,
                 note: CoinLog::getTypeText($logTypeId) . ":" . $chest['reward_amount']
             );
 
@@ -183,6 +196,7 @@ class Chest extends Base
             Db::rollback();
             $this->error(__('Receive error ') . $e->getMessage());
         }
+
         $this->success(__('Receive success'), ['reward_amount' => $chest['reward_amount']]);
     }
 
@@ -210,10 +224,20 @@ class Chest extends Base
     {
         $userId = $this->userInfo['id'];
 
-        // 查询用户充值总额
-        $recharge = Orders::where('user_id', $userId)->where('pay_status', 1)->sum('amount');
-        $user = Account::find($userId);
-        $inviteCount = $user->valid_invite_count ?? 0;
+
+        // 1. 我的直属邀请总人数
+        $totalInviteCount = Account::where('p_id', $userId)->count() ?? 0;
+
+        // 2. 我的下级有充值的人数（去重）
+        $inviteUserIds = Account::where('p_id', $userId)->column('id');
+        $rechargeUserCount = 0;
+        if (!empty($inviteUserIds)) {
+            $rechargeUserCount = Orders::whereIn('user_id', $inviteUserIds)
+                ->where('pay_status', 1)
+                ->group('user_id')
+                ->count();
+        }
+
 
         // 获取所有宝箱
         $chests = ChestModel::order('sort desc,id desc')->select();
@@ -224,7 +248,10 @@ class Chest extends Base
         // 筛选出可领取的宝箱
         $canReceiveChests = [];
         foreach ($chests as $chest) {
-            $canReceive = $recharge >= $chest['recharge_amount'] && $inviteCount >= $chest['invite_count'];
+            $need = $chest['invite_count'];
+
+            // ===================== 新判断逻辑 =====================
+            $canReceive = ($totalInviteCount >= $need) && ($rechargeUserCount >= $need);
             $notReceived = !in_array($chest['id'], $receivedChestIds);
 
             if ($canReceive && $notReceived) {
@@ -278,6 +305,7 @@ class Chest extends Base
             Db::rollback();
             $this->error(__('Receive all chests error ') . $e->getMessage());
         }
+
         $this->success(__('Receive all chests success'), [
             'total_reward' => $totalReward,
             'received_count' => count($canReceiveChests),
