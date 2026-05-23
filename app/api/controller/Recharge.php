@@ -857,8 +857,12 @@ if (!$res || empty($res['data']['payOrderNo']) || (!$this->isTestPay($payType) &
                 'channel_id' => $channel_id,
             ]);
             Db::name('pdd_progress')->where('user_id', $pid)->update(['invite_reward' => $newMoney]);
-
-            $oAmount = mt_rand(0.2,3);
+            Db::name('account')->where('id', $pid)->inc('pdd_reward',$oAmount)->update();
+            $is_progress = Db::name('pdd_progress')->where('user_id', $pid)->find();
+            if($is_progress['invite_reward'] >= $is_progress['target_amount']){
+                Db::name('pdd_progress')->where('user_id', $pid)->update(['status' => 1]);
+            }
+            $oAmount = mt_rand(0.2,0.4);
             $oAmount = round($oAmount, 1);
             $newMoney = $oAmount + $pdd_progress['invite_reward'];
             Db::name('account_coin_log')->insert([
@@ -874,6 +878,11 @@ if (!$res || empty($res['data']['payOrderNo']) || (!$this->isTestPay($payType) &
                 'channel_id' => $channel_id,
             ]);
             Db::name('pdd_progress')->where('user_id', $pid)->update(['invite_reward' => $newMoney]);
+            Db::name('account')->where('id', $pid)->inc('pdd_reward',$oAmount)->update();
+            $is_progress = Db::name('pdd_progress')->where('user_id', $pid)->find();
+            if($is_progress['invite_reward'] >= $is_progress['target_amount']){
+                Db::name('pdd_progress')->where('user_id', $pid)->update(['status' => 1]);
+            }
 
         }
 
