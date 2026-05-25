@@ -9,13 +9,15 @@ class PddInviteRegisterRewardConfigSeeder extends Seeder
     private const MIN_CONFIG = 'pdd_invite_register_reward';
     private const MAX_CONFIG = 'pdd_invite_register_reward_max';
     private const TURNTABLE_WEIGHTS = [
-        'pdd_withdrawal' => 100,
-        'pdd_unlock_required_invites' => 90,
-        'pdd_valid_invite_recharge_min' => 80,
-        self::MIN_CONFIG => 70,
-        self::MAX_CONFIG => 69,
-        'pdd_init_min' => 60,
-        'pdd_init_max' => 50,
+        'pdd_withdrawal' => 120,
+        'pdd_unlock_required_invites' => 110,
+        'pdd_valid_invite_recharge_min' => 100,
+        'pdd_invite_deposit_reward' => 90,
+        'pdd_invite_deposit_reward_max' => 89,
+        self::MIN_CONFIG => 80,
+        self::MAX_CONFIG => 79,
+        'pdd_init_min' => 70,
+        'pdd_init_max' => 60,
     ];
 
     public function run(): void

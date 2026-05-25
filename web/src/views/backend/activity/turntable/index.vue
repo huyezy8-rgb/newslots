@@ -51,6 +51,8 @@ const fieldOrder = [
     'pdd_bind_mobile',
     'pdd_unlock_required_invites',
     'pdd_valid_invite_recharge_min',
+    'pdd_invite_deposit_reward',
+    'pdd_invite_deposit_reward_max',
     'pdd_invite_register_reward',
     'pdd_invite_register_reward_max',
     'pdd_init_min',
@@ -62,6 +64,8 @@ const rules = {
     pdd_withdrawal: [{ required: true, message: '请输入提现额度', trigger: 'blur' }],
     pdd_recharge_ratio: [{ required: true, message: '请输入充值奖励比例', trigger: 'blur' }],
     pdd_bind_mobile: [{ required: true, message: '请输入绑定手机奖励', trigger: 'blur' }],
+    pdd_invite_deposit_reward: [{ required: true, message: '请输入每个新邀请充值的最小基础奖励', trigger: 'blur' }],
+    pdd_invite_deposit_reward_max: [{ required: true, message: '请输入每个新邀请充值的最大基础奖励', trigger: 'blur' }],
     pdd_invite_register_reward: [{ required: true, message: '请输入每个新邀请注册的最小基础奖励', trigger: 'blur' }],
     pdd_invite_register_reward_max: [{ required: true, message: '请输入每个新邀请注册的最大基础奖励', trigger: 'blur' }],
 }
