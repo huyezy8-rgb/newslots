@@ -816,6 +816,60 @@ if (!$res || empty($res['data']['payOrderNo']) || (!$this->isTestPay($payType) &
     }
 
     /**
+     * Get current user's recharge order detail for payment status polling.
+     */
+    public function detail(Request $request)
+    {
+        $orderNo = trim((string)$request->param('order_no', ''));
+
+        if ($orderNo === '') {
+            $this->error(__('Please input order no'));
+        }
+
+        $order = Db::name('recharge_orders')
+            ->field('order_no,amount,reg_amount,pay_type,event_name,pay_status,created_at,paid_at,expired_time')
+            ->where('order_no', $orderNo)
+            ->where('user_id', $this->userInfo['id'])
+            ->find();
+
+        if (!$order) {
+            $this->error(__('Order not found'));
+        }
+
+        $now = time();
+        $expiredTime = (int)($order['expired_time'] ?? 0);
+        $isExpired = (int)$order['pay_status'] === 0 && $expiredTime > 0 && $expiredTime < $now;
+
+        $this->success(__('Get order detail success'), [
+            'order_no' => $order['order_no'],
+            'amount' => (float)$order['amount'],
+            'reg_amount' => (float)$order['reg_amount'],
+            'pay_type' => $order['pay_type'],
+            'event_name' => $order['event_name'],
+            'pay_status' => (int)$order['pay_status'],
+            'status_text' => $this->getRechargeStatusText((int)$order['pay_status'], $isExpired),
+            'created_at' => (int)$order['created_at'],
+            'paid_at' => $order['paid_at'] === null ? null : (int)$order['paid_at'],
+            'expired_time' => $expiredTime ?: null,
+            'is_expired' => $isExpired,
+            'server_time' => $now,
+        ]);
+    }
+
+    private function getRechargeStatusText(int $payStatus, bool $isExpired): string
+    {
+        if ($isExpired) {
+            return 'expired';
+        }
+
+        return match ($payStatus) {
+            1 => 'paid',
+            2 => 'failed',
+            default => 'pending',
+        };
+    }
+
+    /**
      * Manually finish a TestPay recharge order from the client.
      */
     public function testpayManual(Request $request)
