@@ -193,9 +193,14 @@ class PddService
     {
         // 默认邀请注册奖励金额
         //$inviteRewardAmount = (float)(get_sys_config('pdd_invite_register_reward') ?? 0.1);
-        $arr = [0.01,0.02,0.03,0.04,0.05,0.06];
-        $inviteRewardAmount = $arr[array_rand($arr)];
+//        $arr = [0.01,0.02,0.03,0.04,0.05,0.06];
+        $pdd_invite_register_reward = Db::name('config')->where('name', 'pdd_invite_register_reward')->value('value');
+        $pdd_invite_register_reward = $pdd_invite_register_reward * 100;
+        $pdd_invite_register_reward_max = Db::name('config')->where('name', 'pdd_invite_register_reward_max')->value('value');
+        $pdd_invite_register_reward_max = $pdd_invite_register_reward_max * 100;
+        $inviteRewardAmount = mt_rand($pdd_invite_register_reward, $pdd_invite_register_reward_max) / 100;
         $isQualifiedFill = false; // 标记是否为补齐奖励
+
 
         // 读取解锁配置：需要多少个达标人数才能触发补齐（默认 2）
         $requiredQualifiedCount = (int)(get_sys_config('pdd_unlock_required_invites') ?? 2);

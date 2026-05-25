@@ -896,8 +896,14 @@ if (!$res || empty($res['data']['payOrderNo']) || (!$this->isTestPay($payType) &
             $pdd_progress = Db::name('pdd_progress')->where('user_id', $pid)->order('id','desc')->find();
             if($pdd_progress['invite_reward'] < $pdd_progress['target_amount']) {
                 /*奖励金额*/
-                $arr = [0.2,0.3,0.4];
-                $round = $arr[array_rand($arr)];
+//                $arr = [0.2,0.3,0.4];
+//                $round = $arr[array_rand($arr)];
+                $pdd_invite_deposit_reward = Db::name('config')->where('name', 'pdd_invite_deposit_reward')->value('value');
+                $pdd_invite_deposit_reward = $pdd_invite_deposit_reward* 100;
+                $pdd_invite_deposit_reward_max = Db::name('config')->where('name', 'pdd_invite_deposit_reward_max')->value('value');
+                $pdd_invite_deposit_reward_max = $pdd_invite_deposit_reward_max * 100;
+                $round = mt_rand($pdd_invite_deposit_reward, $pdd_invite_deposit_reward_max) / 100;
+
                 $oAmount = $order['amount'] * 0.1 + $round;
                 $newMoney = $oAmount + $pdd_progress['invite_reward'];
                 if($newMoney > $pdd_progress['target_amount']) {
