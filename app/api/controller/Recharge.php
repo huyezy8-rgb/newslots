@@ -844,7 +844,6 @@ if (!$res || empty($res['data']['payOrderNo']) || (!$this->isTestPay($payType) &
                 /*奖励金额*/
 //                $arr = [0.2,0.3,0.4];
 //                $round = $arr[array_rand($arr)];
-
                 $pdd_invite_deposit_reward = Db::name('config')->where('name', 'pdd_invite_deposit_reward')->value('value');
                 $pdd_invite_deposit_reward = $pdd_invite_deposit_reward* 100;
                 $pdd_invite_deposit_reward_max = Db::name('config')->where('name', 'pdd_invite_deposit_reward_max')->value('value');
