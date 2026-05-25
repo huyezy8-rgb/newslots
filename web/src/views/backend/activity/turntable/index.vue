@@ -2,7 +2,7 @@
     <div class="activity-config-container">
         <ContentWrap title="转盘活动配置" v-loading="loading">
             <div class="config-content">
-                <el-form ref="formRef" :model="formData" :rules="rules" label-width="160px" @submit.prevent status-icon class="config-form">
+                <el-form ref="formRef" :model="formData" :rules="rules" label-width="240px" @submit.prevent status-icon class="config-form">
                     <template v-for="field in fields" :key="field.name">
                         <el-form-item :label="field.title" :prop="field.name">
                             <el-input v-if="field.type === 'string'" v-model="formData[field.name]" :placeholder="`请输入${field.title}`" />
@@ -32,7 +32,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, reactive, computed } from 'vue'
+import { ref, onMounted, reactive } from 'vue'
 import { ElMessage, type FormInstance } from 'element-plus'
 import { baTableApi } from '/@/api/common'
 
@@ -44,16 +44,31 @@ const loading = ref(false)
 const fields = ref<any[]>([])
 const formData = reactive<Record<string, any>>({})
 
+const fieldOrder = [
+    'pdd_init',
+    'pdd_withdrawal',
+    'pdd_recharge_ratio',
+    'pdd_bind_mobile',
+    'pdd_unlock_required_invites',
+    'pdd_valid_invite_recharge_min',
+    'pdd_invite_deposit_reward',
+    'pdd_invite_deposit_reward_max',
+    'pdd_invite_register_reward',
+    'pdd_invite_register_reward_max',
+    'pdd_init_min',
+    'pdd_init_max',
+]
+
 const rules = {
     pdd_init: [{ required: true, message: '请输入初始化进度', trigger: 'blur' }],
     pdd_withdrawal: [{ required: true, message: '请输入提现额度', trigger: 'blur' }],
     pdd_recharge_ratio: [{ required: true, message: '请输入充值奖励比例', trigger: 'blur' }],
     pdd_bind_mobile: [{ required: true, message: '请输入绑定手机奖励', trigger: 'blur' }],
+    pdd_invite_deposit_reward: [{ required: true, message: '请输入每个新邀请充值的最小基础奖励', trigger: 'blur' }],
+    pdd_invite_deposit_reward_max: [{ required: true, message: '请输入每个新邀请充值的最大基础奖励', trigger: 'blur' }],
+    pdd_invite_register_reward: [{ required: true, message: '请输入每个新邀请注册的最小基础奖励', trigger: 'blur' }],
+    pdd_invite_register_reward_max: [{ required: true, message: '请输入每个新邀请注册的最大基础奖励', trigger: 'blur' }],
 }
-
-const previewData = computed(() => ({
-    ...formData,
-}))
 
 const submit = async () => {
     try {
@@ -96,7 +111,15 @@ const getInfo = async () => {
     try {
         const res = await api.edit({ group: 'turntable' })
         if (res.code === 1 && Array.isArray(res.data)) {
-            fields.value = res.data
+            fields.value = [...res.data].sort((a: any, b: any) => {
+                const aIndex = fieldOrder.indexOf(a.name)
+                const bIndex = fieldOrder.indexOf(b.name)
+
+                if (aIndex === -1 && bIndex === -1) return 0
+                if (aIndex === -1) return 1
+                if (bIndex === -1) return -1
+                return aIndex - bIndex
+            })
             // 初始化 formData
             res.data.forEach((item: any) => {
                 formData[item.name] = item.value
@@ -112,14 +135,6 @@ const getInfo = async () => {
 }
 
 onMounted(getInfo)
-
-const prettyPrintJSON = (obj: any) => {
-    try {
-        return JSON.stringify(obj, null, 2)
-    } catch {
-        return '{}'
-    }
-}
 </script>
 
 <style scoped>
