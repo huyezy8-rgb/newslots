@@ -58,7 +58,7 @@ class SimpleActivity extends Backend
             $this->success();
         }
 
-        $list = Config::field("name,title,type,value,extend")->where("group", $group)->order("id","asc")->select();
+        $list = Config::field("name,title,type,value,extend")->where("group", $group)->order("weigh", "desc")->order("id","asc")->select();
         $this->success('', $list);
     }
 }
