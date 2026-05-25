@@ -4,6 +4,7 @@ namespace app\api\controller;
 
 use app\api\enum\CoinLog;
 use app\common\controller\Api;
+use app\common\service\ChannelResolver;
 use think\App;
 
 class Channel extends Base
@@ -15,31 +16,9 @@ class Channel extends Base
             'channel_name',
         ]);
 
-        $channelInfo = null;
-        if (!empty($data["channel_name"])) {
-            $channelInfo
-                = \app\common\model\ChannelList::withoutField("create_time,update_time")
-                ->where(["name" => $data["channel_name"]])
-                ->find();
-        }
+        $channelInfo = ChannelResolver::resolve($data["channel_name"] ?? null, $this->request);
         if (!$channelInfo) {
-            $domain = "";
-            if(isset($_SERVER['HTTP_REFERER'])) {
-                $referer = $_SERVER['HTTP_REFERER'];
-                if ($referer) {
-                    $referer_host = parse_url($referer, PHP_URL_HOST);
-                    $domain = $referer_host;
-                }
-            }
-            if  ($domain) {
-                $channelInfo = \app\common\model\ChannelList::withoutField("create_time,update_time")
-                    ->where(["domain" => $domain])
-                    ->find();
-            }
-
-            if (!$channelInfo) {
-                $channelInfo = \app\common\model\ChannelList::withoutField("create_time,update_time")->order('id', 'asc')->find();
-            }
+            $this->error(__('Channel not found'));
         }
 
        $this->success("ok", [

@@ -4,7 +4,7 @@ namespace app\api\controller;
 
 use think\facade\Db;
 use think\facade\Cache;
-use app\common\model\ChannelList;
+use app\common\service\ChannelResolver;
 
 /**
  * Banner图接口
@@ -23,30 +23,9 @@ class Banner extends Base
             'channel_name',
         ]);
 
-        $channelInfo = null;
-        if (!empty($data['channel_name'])) {
-            $channelInfo = ChannelList::withoutField('create_time,update_time')
-                ->where(['name' => $data['channel_name']])
-                ->find();
-        }
+        $channelInfo = ChannelResolver::resolve($data['channel_name'] ?? null, $this->request);
         if (!$channelInfo) {
-            $domain = '';
-            if (isset($_SERVER['HTTP_REFERER'])) {
-                $referer = $_SERVER['HTTP_REFERER'];
-                if ($referer) {
-                    $referer_host = parse_url($referer, PHP_URL_HOST);
-                    $domain = $referer_host;
-                }
-            }
-            if ($domain) {
-                $channelInfo = ChannelList::withoutField('create_time,update_time')
-                    ->where(['domain' => $domain])
-                    ->find();
-            }
-
-            if (!$channelInfo) {
-                $channelInfo = ChannelList::withoutField('create_time,update_time')->order('id', 'asc')->find();
-            }
+            $this->error(__('Channel not found'));
         }
 
         // 渠道ID
@@ -196,4 +175,3 @@ class Banner extends Base
         return $domain . '/' . ltrim($image, '/');
     }
 }
-

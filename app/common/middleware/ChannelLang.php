@@ -9,6 +9,7 @@ use think\facade\Lang;
 use think\facade\Config;
 use app\common\model\Account;
 use app\common\model\ChannelList;
+use app\common\service\ChannelResolver;
 
 /**
  * 根据渠道设置语言
@@ -61,6 +62,15 @@ class ChannelLang
         }
 
         // 2. 通过域名获取渠道语言
+        try {
+            $channelInfo = ChannelResolver::resolveByRequestDomain($request);
+            if ($channelInfo && !empty($channelInfo['lang'])) {
+                return $channelInfo['lang'];
+            }
+        } catch (\Exception $e) {
+            // Ignore and continue to the legacy lookup below.
+        }
+
         $domain = $this->getDomain($request);
         if ($domain) {
             try {
@@ -133,4 +143,3 @@ class ChannelLang
         return null;
     }
 }
-

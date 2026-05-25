@@ -7,6 +7,7 @@ use app\common\controller\Api;
 use app\common\model\Config;
 
 use app\common\model\SmsVerify;
+use app\common\service\ChannelResolver;
 use app\common\service\ChannelInfoService;
 use ba\GameHelper;
 use think\facade\Log;
@@ -36,32 +37,9 @@ class Login extends Api
                 $this->error($e->getMessage());
             }
             // 渠道信息查找
-            $channelInfo = null;
-            if (!empty($data["channel_name"])) {
-                $channelInfo
-                    = \app\common\model\ChannelList::withoutField("create_time,update_time")
-                    ->where(["name" => $data["channel_name"]])
-                    ->find();
-            }
-
+            $channelInfo = ChannelResolver::resolve($data["channel_name"] ?? null, $this->request);
             if (!$channelInfo) {
-                $domain = "";
-                if(isset($_SERVER['HTTP_REFERER'])) {
-                    $referer = $_SERVER['HTTP_REFERER'];
-                    if ($referer) {
-                        $referer_host = parse_url($referer, PHP_URL_HOST);
-                        $domain = $referer_host;
-                    }
-                }
-                if  ($domain) {
-                    $channelInfo = \app\common\model\ChannelList::withoutField("create_time,update_time")
-                        ->where(["domain" => $domain])
-                        ->find();
-                }
-
-                if (!$channelInfo) {
-                    $channelInfo = \app\common\model\ChannelList::withoutField("create_time,update_time")->order('id', 'asc')->find();
-                }
+                $this->error(__('Channel not found'));
             }
 
             // 用户查找

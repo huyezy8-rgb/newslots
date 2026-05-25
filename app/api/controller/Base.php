@@ -3,6 +3,7 @@
 namespace app\api\controller;
 
 use app\common\controller\Api;
+use app\common\service\ChannelResolver;
 use think\App;
 
 class Base extends Api
@@ -73,31 +74,12 @@ class Base extends Api
     private function setLangByDomain(): void
     {
         try {
-            $domain = '';
-            if (isset($_SERVER['HTTP_REFERER'])) {
-                $referer = $_SERVER['HTTP_REFERER'];
-                if ($referer) {
-                    $referer_host = parse_url($referer, PHP_URL_HOST);
-                    $domain = $referer_host;
-                }
-            }
-            
-            // 如果没有 referer，尝试从请求头获取
-            if (empty($domain) && isset($_SERVER['HTTP_HOST'])) {
-                $domain = $_SERVER['HTTP_HOST'];
-            }
-            
-            if ($domain) {
-                $channelInfo = \app\common\model\ChannelList::withoutField('create_time,update_time')
-                    ->where('domain', $domain)
-                    ->find();
-                
-                if ($channelInfo && !empty($channelInfo['lang'])) {
-                    $channelLang = $channelInfo['lang'];
-                    $allowLangList = \think\facade\Config::get('lang.allow_lang_list', ['zh-cn', 'en', 'ar']);
-                    if (in_array($channelLang, $allowLangList)) {
-                        $this->app->lang->switchLangSet($channelLang);
-                    }
+            $channelInfo = ChannelResolver::resolveByRequestDomain($this->request);
+            if ($channelInfo && !empty($channelInfo['lang'])) {
+                $channelLang = $channelInfo['lang'];
+                $allowLangList = \think\facade\Config::get('lang.allow_lang_list', ['zh-cn', 'en', 'ar']);
+                if (in_array($channelLang, $allowLangList)) {
+                    $this->app->lang->switchLangSet($channelLang);
                 }
             }
         } catch (\Exception $e) {
