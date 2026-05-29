@@ -18,7 +18,7 @@ class Methods extends Backend
      */
     protected object $model;
 
-    protected array $noNeedPermission = ['channels'];
+    protected array $noNeedPermission = ['channels', 'batchEdit'];
 
     protected array|string $preExcludeFields = ['id', 'create_time', 'update_time'];
 
@@ -27,6 +27,17 @@ class Methods extends Backend
     protected string|array $quickSearchField = ['id', 'channel_code_table.name'];
 
     private const AMOUNT_FIELDS = [
+        'min_recharge_amount',
+        'max_recharge_amount',
+        'min_withdraw_amount',
+        'max_withdraw_amount',
+    ];
+
+    private const BATCH_EDIT_FIELDS = [
+        'show',
+        'status',
+        'is_clause',
+        'pay_method',
         'min_recharge_amount',
         'max_recharge_amount',
         'min_withdraw_amount',
@@ -87,6 +98,70 @@ class Methods extends Backend
         }, $rows))));
 
         $this->success('', $channels);
+    }
+
+    public function batchEdit(): void
+    {
+        $this->checkEditPermission();
+
+        if (!$this->request->isPost()) {
+            $this->error('Invalid request method');
+        }
+
+        $payload = $this->request->post();
+        if (!$payload || (!array_key_exists('ids', $payload) && !array_key_exists('fields', $payload))) {
+            $input = $this->request->getContent() ?: $this->request->getInput();
+            $jsonPayload = json_decode($input, true);
+            $payload = is_array($jsonPayload) ? $jsonPayload : [];
+        }
+
+        $payloadIds = $payload['ids'] ?? [];
+        $payloadIds = is_array($payloadIds) ? $payloadIds : [$payloadIds];
+        $ids = array_values(array_unique(array_filter(array_map(static function ($id): int {
+            return (int)$id;
+        }, $payloadIds), static function (int $id): bool {
+            return $id > 0;
+        })));
+        if (!$ids) {
+            $this->error('Please select payment methods');
+        }
+
+        $payloadFields = $payload['fields'] ?? [];
+        if (!is_array($payloadFields)) {
+            $this->error('Please select fields to update');
+        }
+
+        $fields = $this->normalizeBatchFields($payloadFields);
+        if (!$fields) {
+            $this->error('Please select fields to update');
+        }
+
+        $rows = $this->model->whereIn($this->model->getPk(), $ids)->select();
+        if ($rows->count() !== count($ids)) {
+            $this->error('Selected payment method does not exist');
+        }
+
+        $updated = Db::transaction(function () use ($rows, $fields): int {
+            $count = 0;
+            foreach ($rows as $row) {
+                $raw = $row->getData();
+                $merged = array_merge($raw, $fields);
+                $this->validateAmountRanges($merged);
+
+                $update = $fields;
+                if (array_key_exists('pay_method', $fields) && (string)$merged['pay_method'] !== '2') {
+                    $update['field_config'] = null;
+                    $update['validation_rules'] = null;
+                }
+
+                $row->save($update);
+                $count++;
+            }
+
+            return $count;
+        });
+
+        $this->success('Batch update successful', ['updated' => $updated]);
     }
 
     /**
@@ -155,6 +230,54 @@ class Methods extends Backend
         if ($minWithdraw !== null && $maxWithdraw !== null && $minWithdraw > $maxWithdraw) {
             $this->error('Minimum withdraw amount cannot exceed maximum withdraw amount');
         }
+    }
+
+    private function checkEditPermission(): void
+    {
+        $routePath = ($this->app->request->controllerPath ?? '') . '/edit';
+        if (!$this->auth->check($routePath)) {
+            $this->error(__('You have no permission'), [], 401);
+        }
+    }
+
+    private function normalizeBatchFields(array $fields): array
+    {
+        $fields = array_intersect_key($fields, array_flip(self::BATCH_EDIT_FIELDS));
+
+        foreach (['show' => ['all', 'ios', 'android'], 'status' => ['0', '1'], 'is_clause' => ['0', '1'], 'pay_method' => ['0', '1', '2']] as $field => $allowed) {
+            if (!array_key_exists($field, $fields)) {
+                continue;
+            }
+
+            $value = (string)$fields[$field];
+            if (!in_array($value, $allowed, true)) {
+                $this->error('Invalid ' . $field);
+            }
+            $fields[$field] = $value;
+        }
+
+        foreach (self::AMOUNT_FIELDS as $field) {
+            if (!array_key_exists($field, $fields)) {
+                continue;
+            }
+
+            if ($fields[$field] === '' || $fields[$field] === null) {
+                $fields[$field] = null;
+                continue;
+            }
+
+            if (!is_numeric($fields[$field])) {
+                $this->error('Invalid ' . $field);
+            }
+
+            $amount = (float)$fields[$field];
+            if ($amount < 0) {
+                $this->error('Invalid ' . $field);
+            }
+            $fields[$field] = $amount;
+        }
+
+        return $fields;
     }
 
     private function normalizeAmountFields(array $data): array

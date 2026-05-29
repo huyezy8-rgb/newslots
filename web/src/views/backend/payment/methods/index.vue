@@ -11,9 +11,22 @@
         <!-- 表格顶部菜单 -->
         <!-- 自定义按钮请使用插槽，甚至公共搜索也可以使用具名插槽渲染，参见文档 -->
         <TableHeader
-            :buttons="['refresh', 'add', 'edit', 'delete', 'comSearch', 'quickSearch', 'columnDisplay']"
+            :buttons="['refresh', 'add', 'delete', 'comSearch', 'quickSearch', 'columnDisplay']"
             :quick-search-placeholder="t('Quick search placeholder', { fields: t('payment.methods.quick Search Fields') })"
-        ></TableHeader>
+        >
+            <el-tooltip v-if="baTable.auth('edit')" content="编辑" placement="top">
+                <el-button v-blur @click="openSingleEdit" :disabled="selectedCount !== 1" class="payment-methods-header-button" type="primary">
+                    <Icon name="fa fa-pencil" />
+                    <span class="payment-methods-header-button__text">编辑</span>
+                </el-button>
+            </el-tooltip>
+            <el-tooltip v-if="baTable.auth('edit')" content="批量编辑" placement="top">
+                <el-button v-blur @click="openBatchEdit" :disabled="!selectedCount" class="payment-methods-header-button" type="primary">
+                    <Icon name="fa fa-edit" />
+                    <span class="payment-methods-header-button__text">批量编辑</span>
+                </el-button>
+            </el-tooltip>
+        </TableHeader>
 
         <!-- 表格 -->
         <!-- 表格列有多种自定义渲染方式，比如自定义组件、具名插槽等，参见文档 -->
@@ -22,12 +35,14 @@
 
         <!-- 表单 -->
         <PopupForm />
+        <BatchEditDialog ref="batchEditDialogRef" />
     </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, provide, ref, useTemplateRef } from 'vue'
+import { computed, onMounted, provide, ref, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
+import BatchEditDialog from './batchEditDialog.vue'
 import PopupForm from './popupForm.vue'
 import { baTableApi } from '/@/api/common'
 import { defaultOptButtons } from '/@/components/table'
@@ -42,6 +57,7 @@ defineOptions({
 
 const { t } = useI18n()
 const tableRef = useTemplateRef('tableRef')
+const batchEditDialogRef = ref<InstanceType<typeof BatchEditDialog>>()
 const optButtons: OptButton[] = defaultOptButtons(['edit', 'delete'])
 const ALL_CHANNEL_TAB = '全部'
 const channelTabs = ref([ALL_CHANNEL_TAB])
@@ -203,6 +219,19 @@ const baTable = new baTableClass(
 
 provide('baTable', baTable)
 
+const selectedCount = computed(() => baTable.table.selection?.length || 0)
+
+const openSingleEdit = () => {
+    if (selectedCount.value !== 1) {
+        return
+    }
+    baTable.onTableHeaderAction('edit', {})
+}
+
+const openBatchEdit = () => {
+    batchEditDialogRef.value?.open()
+}
+
 const onChannelTabChange = (tabName: string | number) => {
     const currentLimit = baTable.table.filter?.limit
     const search = (baTable.table.filter?.search || []).filter((item: anyObj) => item.field !== 'channelCodeTable.name')
@@ -257,5 +286,13 @@ onMounted(() => {
 
 .payment-channel-tabs :deep(.el-tabs__header) {
     margin-bottom: 0;
+}
+
+.payment-methods-header-button {
+    margin-left: 12px;
+}
+
+.payment-methods-header-button__text {
+    margin-left: 6px;
 }
 </style>
