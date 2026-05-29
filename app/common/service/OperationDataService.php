@@ -50,7 +50,7 @@ class OperationDataService
         $gameActiveUsers = $gameActiveUsers->distinct(true)->column('user_id');
         // 1.2.2 充值活跃用户
         $rechargeActiveUsers = Db::name('recharge_orders')
-            ->whereBetweenTime('created_at', $startTime, $endTime);
+            ->whereBetween('created_at', [$startTime, $endTime]);
         if ($channelId && !empty($userIds)) {
             $rechargeActiveUsers = $rechargeActiveUsers->whereIn('user_id', $userIds);
         }
@@ -364,7 +364,7 @@ class OperationDataService
             ->distinct(true)
             ->column('user_id');
         $rechargeActiveUsers = Db::name('recharge_orders')
-            ->whereBetweenTime('created_at', $startTime, $endTime)
+            ->whereBetween('created_at', [$startTime, $endTime])
             ->whereIn('user_id', $oldUserIds)
             ->distinct(true)
             ->column('user_id');

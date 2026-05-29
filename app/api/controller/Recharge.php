@@ -556,8 +556,8 @@ if ($this->isTestPay($payType)) {
 
     // ====== 这里改成你自己的 SuccusPay 配置 ======
     $succusApiUrl = 'https://www.succuspay.com/api';
-    $succusMchNo  = '2025067994';
-    $succusKey    = 'ABbVB47I093X7wa7ss6rc15Z85H32z37';
+    $succusMchNo  = '2026058333';
+    $succusKey    = 'AE1F6561u7Xv038He8T7tI6S5gbY1522';
     // ==========================================
 
     // 前端传进来的 pay_type 映射成 SuccusPay 的 wayCode

@@ -115,9 +115,11 @@ class Dashboard extends Backend
         }
         
         // 如果指定了渠道，获取该渠道下的用户ID列表
-        if ($channelId) {
-            $userIds = Db::name('account')->where('channel_id', $channelId)->whereBetweenTime('reg_time', $startOfDay, $endOfDay)->column('id');
-        }
+       if ($channelId) {
+    $userIds = Db::name('account')
+        ->where('channel_id', $channelId)
+        ->column('id');
+}
 
         // ==================== 数据源选择策略 ====================
         
@@ -147,8 +149,8 @@ class Dashboard extends Backend
             $registeredUsers = $this->getRegisteredUsers($startOfDay, $endOfDay, $channelId, $userIds);
             
             // 从预计算数据获取核心指标
-            $paidUsers = $operationData['all_paid_users'] ?? 0;           // 付费用户数
-            $totalRechargeAmount = $operationData['all_paid_amount'] ?? 0; // 充值总额
+            $paidUsers = $this->getPaidUsers($startOfDay, $endOfDay, $channelId, $userIds);
+$totalRechargeAmount = $this->getTotalRechargeAmount($startOfDay, $endOfDay, $channelId, $userIds);
             $withdrawalAmount = $operationData['all_withdraw_amount'] ?? 0; // 提现金额
             
             $data = [
@@ -179,7 +181,19 @@ class Dashboard extends Backend
                 
                 // 新用户首充用户数：统计当日注册且当日充值的用户数
                 'newUserFirstChargeUsers' => $this->getNewUserFirstChargeUsers($startOfDay, $endOfDay, $channelId, $userIds),
-                
+
+
+'oldUserFirstChargeUsers' => max(
+    $this->getFirstChargeUsers($startOfDay, $endOfDay, $channelId, $userIds)
+    - $this->getNewUserFirstChargeUsers($startOfDay, $endOfDay, $channelId, $userIds),
+    0
+),
+
+'oldUserFirstChargeAmount' => max(
+    $this->getFirstChargeAmount($startOfDay, $endOfDay, $channelId, $userIds)
+    - $this->getNewUserFirstChargeAmount($startOfDay, $endOfDay, $channelId, $userIds),
+    0
+),
                 // 新用户首充金额：统计当日注册且当日充值的用户金额总和
                 'newUserFirstChargeAmount' => $this->getNewUserFirstChargeAmount($startOfDay, $endOfDay, $channelId, $userIds),
                 
@@ -189,7 +203,10 @@ class Dashboard extends Backend
                 'totalRechargeAmount' => $totalRechargeAmount,
                 
                 // 注充率：注册用户数 / 付费用户数
-                'registrationChargeRate' => $this->calculateRegistrationChargeRate($registeredUsers, $paidUsers),
+                'registrationChargeRate' => $this->calculateRegistrationChargeRate(
+    $registeredUsers,
+    $this->getFirstChargeUsers($startOfDay, $endOfDay, $channelId, $userIds)
+),
                 
                 // ==================== 提现相关统计 ====================
                 
@@ -513,13 +530,52 @@ class Dashboard extends Backend
      * @return int 成功支付订单数量
      */
     private function getSuccessPaymentOrderCount(int $startOfDay, int $endOfDay, ?int $channelId, array $userIds): int
-    {
-        if ($channelId) {
-            return Db::name('recharge_orders')->whereIn("user_id", $userIds)->whereBetweenTime('created_at', $startOfDay, $endOfDay)->where('pay_status', 1)->count();
-        } else {
-            return Db::name('recharge_orders')->whereBetweenTime('created_at', $startOfDay, $endOfDay)->where('pay_status', 1)->count();
-        }
+{
+    if ($channelId) {
+        return Db::name('recharge_orders')->whereIn("user_id", $userIds)->whereBetweenTime('created_at', $startOfDay, $endOfDay)->where('pay_status', 1)->count();
+    } else {
+        return Db::name('recharge_orders')->whereBetweenTime('created_at', $startOfDay, $endOfDay)->where('pay_status', 1)->count();
     }
+}
+
+
+/**
+ * 获取付费用户数
+ */
+private function getPaidUsers(int $startOfDay, int $endOfDay, ?int $channelId, array $userIds): int
+{
+    $query = Db::name('recharge_orders')
+        ->where('pay_status', 1)
+        ->whereBetweenTime('created_at', $startOfDay, $endOfDay);
+
+    if ($channelId) {
+        if (empty($userIds)) {
+            return 0;
+        }
+        $query->whereIn('user_id', $userIds);
+    }
+
+    return $query->distinct(true)->count('user_id');
+}
+
+/**
+ * 获取充值总额
+ */
+private function getTotalRechargeAmount(int $startOfDay, int $endOfDay, ?int $channelId, array $userIds): float
+{
+    $query = Db::name('recharge_orders')
+        ->where('pay_status', 1)
+        ->whereBetweenTime('created_at', $startOfDay, $endOfDay);
+
+    if ($channelId) {
+        if (empty($userIds)) {
+            return 0;
+        }
+        $query->whereIn('user_id', $userIds);
+    }
+
+    return (float)$query->sum('amount');
+}
 
     /**
      * 获取总首充用户数（当日所有第一次付费的人数）
@@ -545,7 +601,7 @@ class Dashboard extends Backend
         // 使用子查询优化：找出当日充值的用户中，在此日期之前没有成功充值记录的用户
         $subQuery = Db::name('recharge_orders')
             ->where('pay_status', 1)
-            ->where('paid_at', '<', $startOfDay)
+            ->where('created_at', '<', $startOfDay)
             ->field('DISTINCT user_id');
         
         if ($channelId) {
@@ -557,7 +613,7 @@ class Dashboard extends Backend
         
         // 查询当日所有成功的充值订单
         $query = Db::name('recharge_orders')
-            ->whereBetweenTime('paid_at', $startOfDay, $endOfDay)
+            ->whereBetweenTime('created_at', $startOfDay, $endOfDay)
             ->where('pay_status', 1);
         
         if ($channelId) {
@@ -597,7 +653,7 @@ class Dashboard extends Backend
         // 使用子查询优化：找出当日充值的用户中，在此日期之前没有成功充值记录的用户
         $subQuery = Db::name('recharge_orders')
             ->where('pay_status', 1)
-            ->where('paid_at', '<', $startOfDay)
+            ->where('created_at', '<', $startOfDay)
             ->field('DISTINCT user_id');
         
         if ($channelId) {
@@ -609,7 +665,7 @@ class Dashboard extends Backend
         
         // 查询当日所有成功的充值订单
         $query = Db::name('recharge_orders')
-            ->whereBetweenTime('paid_at', $startOfDay, $endOfDay)
+            ->whereBetweenTime('created_at', $startOfDay, $endOfDay)
             ->where('pay_status', 1);
         
         if ($channelId) {
@@ -671,7 +727,7 @@ class Dashboard extends Backend
         
         // 第二步：统计这些新用户中当日有充值记录的用户数量
         $query = Db::name('recharge_orders')
-            ->whereBetweenTime('paid_at', $startOfDay, $endOfDay)
+            ->whereBetweenTime('created_at', $startOfDay, $endOfDay)
             ->where('pay_status', 1)
             ->whereIn('user_id', $newUserIds);
         
@@ -718,7 +774,7 @@ class Dashboard extends Backend
         
         // 第二步：统计这些新用户中当日有充值记录的用户金额
         $query = Db::name('recharge_orders')
-            ->whereBetweenTime('paid_at', $startOfDay, $endOfDay)
+            ->whereBetweenTime('created_at', $startOfDay, $endOfDay)
             ->where('pay_status', 1)
             ->whereIn('user_id', $newUserIds);
         
@@ -745,10 +801,10 @@ class Dashboard extends Backend
      * @param int $paidUsers 付费用户数
      * @return float 注充率
      */
-    private function calculateRegistrationChargeRate(int $registeredUsers, int $paidUsers): float
-    {
-        return round($paidUsers > 0 ? $registeredUsers / $paidUsers : 0, 2);
-    }
+    private function calculateRegistrationChargeRate(int $registeredUsers, int $firstChargeUsers): float
+{
+    return round($registeredUsers > 0 ? ($firstChargeUsers / $registeredUsers) * 100 : 0, 2);
+}
 
     /**
      * 获取提现成功用户数
@@ -965,7 +1021,7 @@ class Dashboard extends Backend
 
         // 过滤成功的充值订单
         $successRechargeOrders = array_filter($rechargeOrders, function ($order) {
-            return $order['pay_status'] === 1; // 只统计成功的充值
+            return (int)$order['pay_status'] === 1; // 只统计成功的充值
         }, ARRAY_FILTER_USE_BOTH);
         
         // 提取user_id列
@@ -978,7 +1034,7 @@ class Dashboard extends Backend
         
         // 处理提现订单
         $successWithdrawOrders = array_filter($withdrawOrders, function ($order) {
-            return $order['status'] === 2;
+            return (int)$order['status'] === 2;
         }, ARRAY_FILTER_USE_BOTH);
         $withdrawAmountsColumn = array_column($successWithdrawOrders, 'amount');
         $withdrawalAmount = array_sum($withdrawAmountsColumn);
@@ -1004,21 +1060,23 @@ class Dashboard extends Backend
         
         // 计算 registrationChargeRate
         $successOrdersForRate = array_filter($rechargeOrders, function ($order) {
-            return $order['pay_status'] === 1;
+            return (int)$order['pay_status'] === 1;
         }, ARRAY_FILTER_USE_BOTH);
         $userIdsColumnForRate = array_column($successOrdersForRate, 'user_id');
         $paidUsersCount = count(array_unique($userIdsColumnForRate));
         $registrationChargeRate = 0;
-        if ($paidUsersCount > 0) {
-            $registeredCount = $channelId
-                ? Db::name('account')->whereIn("id", $userIds)->whereBetweenTime('reg_time', $startOfDay, $endOfDay)->count()
-                : Db::name('account')->whereBetweenTime('reg_time', $startOfDay, $endOfDay)->count();
-            $registrationChargeRate = $registeredCount / $paidUsersCount;
-        }
+
+$registeredCount = $channelId
+    ? Db::name('account')->whereIn("id", $userIds)->whereBetweenTime('reg_time', $startOfDay, $endOfDay)->count()
+    : Db::name('account')->whereBetweenTime('reg_time', $startOfDay, $endOfDay)->count();
+
+if ($registeredCount > 0) {
+    $registrationChargeRate = round(($firstChargeUsers / $registeredCount) * 100, 2);
+}
         
         // 计算 withdrawalUsers
         $successWithdrawOrdersForUsers = array_filter($withdrawOrders, function ($order) {
-            return $order['status'] === 2;
+            return (int)$order['status'] === 2;
         }, ARRAY_FILTER_USE_BOTH);
         $withdrawalUserIdsColumn = array_column($successWithdrawOrdersForUsers, 'user_id');
         $withdrawalUsers = count(array_unique($withdrawalUserIdsColumn));
@@ -1068,29 +1126,27 @@ class Dashboard extends Backend
                 ? Db::name('user_login_game_log')->whereBetweenTime('create_time', $startOfDay, $endOfDay)->distinct(true)->whereIn("user_id", $userIds)->count('user_id')
                 : Db::name('user_login_game_log')->whereBetweenTime('create_time', $startOfDay, $endOfDay)->distinct(true)->count('user_id'),
 
-            'paidUsers' => $paidUsers,
+           'paidUsers' => $paidUsers,
+'retentionUsers' => $retentionUsers,
+'onlineUsers' => $onlineUsers,
 
-            'retentionUsers' => $retentionUsers,
+'firstChargeUsers' => $firstChargeUsers,
+'firstChargeAmount' => $firstChargeAmount,
 
-            'onlineUsers' => $onlineUsers,
+'newUserFirstChargeUsers' => $newUserFirstChargeUsers,
+'newUserFirstChargeAmount' => $newUserFirstChargeAmount,
 
-            'firstChargeUsers' => $firstChargeUsers,
+'oldUserFirstChargeUsers' => max($firstChargeUsers - $newUserFirstChargeUsers, 0),
+'oldUserFirstChargeAmount' => max($firstChargeAmount - $newUserFirstChargeAmount, 0),
 
-            'firstChargeAmount' => $firstChargeAmount,
-
-            'newUserFirstChargeUsers' => $newUserFirstChargeUsers,
-
-            'newUserFirstChargeAmount' => $newUserFirstChargeAmount,
-
-            'totalRechargeAmount' => $totalRechargeAmount,
-
-            'registrationChargeRate' => $registrationChargeRate,
+'totalRechargeAmount' => $totalRechargeAmount,
+'registrationChargeRate' => $registrationChargeRate,
 
             'withdrawalUsers' => $withdrawalUsers,
 
             'withdrawalAmount' => $withdrawalAmount,
 
-            'withdrawalRate' => $withdrawalAmount / max($totalRechargeAmount, 1),
+            'withdrawalRate' => round($withdrawalAmount / max($totalRechargeAmount, 1), 2),
 
             'orderAmount' => $orderAmount,
 
