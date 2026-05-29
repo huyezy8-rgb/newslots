@@ -23,5 +23,5 @@ export default {
     max_withdraw_amount: 'Max withdraw amount',
     create_time: 'create_time',
     update_time: 'update_time',
-    'quick Search Fields': 'id',
+    'quick Search Fields': 'id/channel name',
 }

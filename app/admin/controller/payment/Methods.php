@@ -4,6 +4,7 @@ namespace app\admin\controller\payment;
 
 use Throwable;
 use app\common\controller\Backend;
+use think\facade\Db;
 
 /**
  * 支付方式管理
@@ -17,11 +18,13 @@ class Methods extends Backend
      */
     protected object $model;
 
+    protected array $noNeedPermission = ['channels'];
+
     protected array|string $preExcludeFields = ['id', 'create_time', 'update_time'];
 
     protected array $withJoinTable = ['channelCodeTable'];
 
-    protected string|array $quickSearchField = ['id'];
+    protected string|array $quickSearchField = ['id', 'channel_code_table.name'];
 
     private const AMOUNT_FIELDS = [
         'min_recharge_amount',
@@ -66,6 +69,24 @@ class Methods extends Backend
             'total'  => $res->total(),
             'remark' => get_route_remark(),
         ]);
+    }
+
+    public function channels(): void
+    {
+        $rows = Db::name('payment_methods')
+            ->alias('methods')
+            ->leftJoin('payment_channels channels', 'channels.code = methods.channel_code')
+            ->where('methods.channel_code', '<>', '')
+            ->group('methods.channel_code, channels.name')
+            ->field('methods.channel_code, channels.name')
+            ->select()
+            ->toArray();
+
+        $channels = array_values(array_unique(array_filter(array_map(static function (array $row): string {
+            return (string)($row['name'] ?: $row['channel_code']);
+        }, $rows))));
+
+        $this->success('', $channels);
     }
 
     /**
