@@ -112,6 +112,38 @@ const baTable = new baTableClass(
                 },
             },
             {
+                label: t('payment.methods.min_recharge_amount'),
+                prop: 'min_recharge_amount',
+                align: 'center',
+                operator: 'RANGE',
+                sortable: false,
+                width: 140,
+            },
+            {
+                label: t('payment.methods.max_recharge_amount'),
+                prop: 'max_recharge_amount',
+                align: 'center',
+                operator: 'RANGE',
+                sortable: false,
+                width: 140,
+            },
+            {
+                label: t('payment.methods.min_withdraw_amount'),
+                prop: 'min_withdraw_amount',
+                align: 'center',
+                operator: 'RANGE',
+                sortable: false,
+                width: 140,
+            },
+            {
+                label: t('payment.methods.max_withdraw_amount'),
+                prop: 'max_withdraw_amount',
+                align: 'center',
+                operator: 'RANGE',
+                sortable: false,
+                width: 140,
+            },
+            {
                 label: t('payment.methods.create_time'),
                 prop: 'create_time',
                 align: 'center',
@@ -134,7 +166,15 @@ const baTable = new baTableClass(
         dblClickNotEditColumn: [undefined, 'status', 'is_clause'],
     },
     {
-        defaultItems: { show: 'all', status: '1', pay_method: '1' },
+        defaultItems: {
+            show: 'all',
+            status: '1',
+            pay_method: '1',
+            min_recharge_amount: null,
+            max_recharge_amount: null,
+            min_withdraw_amount: null,
+            max_withdraw_amount: null,
+        },
     }
 )
 

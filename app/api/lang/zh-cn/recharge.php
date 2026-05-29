@@ -17,4 +17,6 @@ return [
     'Create success' => '创建成功',
     'Get bank list success' => '获取银行列表成功',
     'Get bank list failed' => '获取银行列表失败',
+    'Recharge amount cannot be less than %s' => '充值金额不能小于 $ %s',
+    'Recharge amount cannot exceed %s' => '充值金额不能大于 $ %s',
 ]; 

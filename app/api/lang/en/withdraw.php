@@ -37,4 +37,6 @@ return [
     'Vip level is 1, please upgrade to VIP2 to withdraw' => 'Vip level is 1, please upgrade to VIP2 to withdraw',
     'Amount: %s' => 'Amount: %s',
     'Bet sum must reach 377*25 times to unlock withdrawal' => 'Bet sum must reach 377*25 times to unlock withdrawal',
+    'Withdraw amount cannot be less than %s' => 'Withdraw amount cannot be less than %s USD',
+    'Withdraw amount cannot exceed %s' => 'Withdraw amount cannot exceed %s USD',
 ]; 

@@ -17,4 +17,6 @@ return [
     'Create success' => 'Create success',
     'Get bank list success' => 'Get bank list success',
     'Get bank list failed' => 'Get bank list failed',
+    'Recharge amount cannot be less than %s' => 'Recharge amount cannot be less than %s USD',
+    'Recharge amount cannot exceed %s' => 'Recharge amount cannot exceed %s USD',
 ]; 

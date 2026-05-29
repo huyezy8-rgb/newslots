@@ -24,7 +24,7 @@
                     v-if="!baTable.form.loading"
                     ref="formRef"
                     @submit.prevent=""
-                    @keyup.enter="baTable.onSubmit(formRef)"
+                    @keyup.enter="onSubmit"
                     :model="baTable.form.items"
                     :label-position="config.layout.shrink ? 'top' : 'right'"
                     :label-width="baTable.form.labelWidth + 'px'"
@@ -66,7 +66,7 @@
                         prop="description"
                         :input-attr="{ rows: 3 }"
                         @keyup.enter.stop=""
-                        @keyup.ctrl.enter="baTable.onSubmit(formRef)"
+                        @keyup.ctrl.enter="onSubmit"
                         :placeholder="t('Please input field', { field: t('payment.methods.description') })"
                     />
                     <FormItem :label="t('payment.methods.icon')" type="image" v-model="baTable.form.items!.icon" prop="icon" />
@@ -92,7 +92,7 @@
                         prop="remark"
                         :input-attr="{ rows: 3 }"
                         @keyup.enter.stop=""
-                        @keyup.ctrl.enter="baTable.onSubmit(formRef)"
+                        @keyup.ctrl.enter="onSubmit"
                         :placeholder="t('Please input field', { field: t('payment.methods.remark') })"
                     />
                     <FormItem :label="t('payment.methods.is_clause')" type="switch" v-model="baTable.form.items!.is_clause" prop="is_clause" />
@@ -110,13 +110,45 @@
                         }"
                         :placeholder="t('Please select field', { field: t('payment.methods.pay_method') })"
                     />
+                    <FormItem
+                        :label="t('payment.methods.min_recharge_amount')"
+                        type="number"
+                        v-model="baTable.form.items!.min_recharge_amount"
+                        prop="min_recharge_amount"
+                        :input-attr="{ min: 0, precision: 2, step: 1 }"
+                        :placeholder="t('Please input field', { field: t('payment.methods.min_recharge_amount') })"
+                    />
+                    <FormItem
+                        :label="t('payment.methods.max_recharge_amount')"
+                        type="number"
+                        v-model="baTable.form.items!.max_recharge_amount"
+                        prop="max_recharge_amount"
+                        :input-attr="{ min: 0, precision: 2, step: 1 }"
+                        :placeholder="t('Please input field', { field: t('payment.methods.max_recharge_amount') })"
+                    />
+                    <FormItem
+                        :label="t('payment.methods.min_withdraw_amount')"
+                        type="number"
+                        v-model="baTable.form.items!.min_withdraw_amount"
+                        prop="min_withdraw_amount"
+                        :input-attr="{ min: 0, precision: 2, step: 1 }"
+                        :placeholder="t('Please input field', { field: t('payment.methods.min_withdraw_amount') })"
+                    />
+                    <FormItem
+                        :label="t('payment.methods.max_withdraw_amount')"
+                        type="number"
+                        v-model="baTable.form.items!.max_withdraw_amount"
+                        prop="max_withdraw_amount"
+                        :input-attr="{ min: 0, precision: 2, step: 1 }"
+                        :placeholder="t('Please input field', { field: t('payment.methods.max_withdraw_amount') })"
+                    />
                 </el-form>
             </div>
         </el-scrollbar>
         <template #footer>
             <div :style="'width: calc(100% - ' + baTable.form.labelWidth! / 1.8 + 'px)'">
                 <el-button @click="baTable.toggleForm()">{{ t('Cancel') }}</el-button>
-                <el-button v-blur :loading="baTable.form.submitLoading" @click="baTable.onSubmit(formRef)" type="primary">
+                <el-button v-blur :loading="baTable.form.submitLoading" @click="onSubmit" type="primary">
                     {{ baTable.form.operateIds && baTable.form.operateIds.length > 1 ? t('Save and edit next item') : t('Save') }}
                 </el-button>
             </div>
@@ -139,8 +171,49 @@ const baTable = inject('baTable') as baTableClass
 
 const { t } = useI18n()
 
+const amountFields = ['min_recharge_amount', 'max_recharge_amount', 'min_withdraw_amount', 'max_withdraw_amount'] as const
+
+const normalizeAmountFields = () => {
+    for (const field of amountFields) {
+        const value = baTable.form.items?.[field]
+        if (value === '' || value === null || typeof value === 'undefined') {
+            baTable.form.items![field] = null
+            continue
+        }
+
+        const amount = Number(value)
+        if (Number.isFinite(amount)) {
+            baTable.form.items![field] = amount
+        }
+    }
+}
+
+const onSubmit = () => {
+    normalizeAmountFields()
+    baTable.onSubmit(formRef.value)
+}
+
+const amountValidator = (rule: any, value: unknown, callback: (error?: Error) => void) => {
+    if (value === '' || value === null || typeof value === 'undefined') {
+        callback()
+        return
+    }
+
+    const amount = Number(value)
+    if (!Number.isFinite(amount) || amount < 0) {
+        callback(new Error(t('Please enter the correct field', { field: rule.field ? t(`payment.methods.${rule.field}`) : '' })))
+        return
+    }
+
+    callback()
+}
+
 const rules: Partial<Record<string, FormItemRule[]>> = reactive({
     unique_tag: [buildValidatorData({ name: 'required', title: t('payment.methods.unique_tag') })],
+    min_recharge_amount: [{ validator: amountValidator, trigger: 'blur' }],
+    max_recharge_amount: [{ validator: amountValidator, trigger: 'blur' }],
+    min_withdraw_amount: [{ validator: amountValidator, trigger: 'blur' }],
+    max_withdraw_amount: [{ validator: amountValidator, trigger: 'blur' }],
     create_time: [buildValidatorData({ name: 'date', title: t('payment.methods.create_time') })],
     update_time: [buildValidatorData({ name: 'date', title: t('payment.methods.update_time') })],
 })

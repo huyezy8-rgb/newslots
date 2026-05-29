@@ -143,6 +143,11 @@ class Withdraw extends Base
         if (!$paymentMethod) {
             $this->error(__('Invalid withdraw method'));
         }
+        try {
+            (new PayGatewayService())->validatePaymentAmount($pay_type, $amount, 'withdraw');
+        } catch (\Throwable $e) {
+            $this->error($e->getMessage());
+        }
         $walletField = CoinLog::walletType($typeid);
         if (!isset($walletField) || !isset($user[$walletField])) {
             $this->error(__('Wallet type not exist'));

@@ -196,7 +196,7 @@ class PayGatewayService
         }
         
         return \app\common\model\payment\Methods::where($where)
-            ->field('unique_tag, name, icon, show, is_clause, channel_code, code, pay_method')
+            ->field('unique_tag, name, icon, show, is_clause, channel_code, code, pay_method, min_recharge_amount, max_recharge_amount, min_withdraw_amount, max_withdraw_amount')
             ->select()
             ->toArray();
     }
@@ -205,6 +205,67 @@ class PayGatewayService
      * 获取启用的提现方式
      * @return array
      */
+    public function getPaymentMethodAmountLimits(string $payType): array
+    {
+        $method = \app\common\model\payment\Methods::where([
+            'unique_tag' => strtolower($payType),
+            'status' => 1,
+        ])->field('min_recharge_amount, max_recharge_amount, min_withdraw_amount, max_withdraw_amount')->find();
+
+        if (!$method) {
+            throw new \Exception(__('Payment method param error'));
+        }
+
+        return [
+            'min_recharge_amount' => $this->formatLimitValue($method['min_recharge_amount'] ?? null),
+            'max_recharge_amount' => $this->formatLimitValue($method['max_recharge_amount'] ?? null),
+            'min_withdraw_amount' => $this->formatLimitValue($method['min_withdraw_amount'] ?? null),
+            'max_withdraw_amount' => $this->formatLimitValue($method['max_withdraw_amount'] ?? null),
+        ];
+    }
+
+    public function validatePaymentAmount(string $payType, float $amount, string $type): void
+    {
+        $limits = $this->getPaymentMethodAmountLimits($payType);
+
+        if ($type === 'recharge') {
+            $min = $limits['min_recharge_amount'];
+            $max = $limits['max_recharge_amount'];
+            if ($min !== null && $amount < $min) {
+                throw new \Exception(__('Recharge amount cannot be less than %s', [$this->formatLimitAmount($min)]));
+            }
+            if ($max !== null && $amount > $max) {
+                throw new \Exception(__('Recharge amount cannot exceed %s', [$this->formatLimitAmount($max)]));
+            }
+            return;
+        }
+
+        if ($type === 'withdraw') {
+            $min = $limits['min_withdraw_amount'];
+            $max = $limits['max_withdraw_amount'];
+            if ($min !== null && $amount < $min) {
+                throw new \Exception(__('Withdraw amount cannot be less than %s', [$this->formatLimitAmount($min)]));
+            }
+            if ($max !== null && $amount > $max) {
+                throw new \Exception(__('Withdraw amount cannot exceed %s', [$this->formatLimitAmount($max)]));
+            }
+        }
+    }
+
+    private function formatLimitValue($amount): ?float
+    {
+        if ($amount === null || $amount === '') {
+            return null;
+        }
+
+        return (float)$amount;
+    }
+
+    private function formatLimitAmount(float $amount): string
+    {
+        return rtrim(rtrim(number_format($amount, 2, '.', ''), '0'), '.');
+    }
+
     private function getEnabledWithdrawMethods(): array
     {
         return $this->getEnabledPaymentMethods('2');
@@ -240,6 +301,10 @@ class PayGatewayService
                 'icon'           => $method['icon'] ?? '',
                 'name'           => $method['name'] ?? '',
                 'show'           => $method['show'] ?? 'all',
+                'min_recharge_amount' => $this->formatLimitValue($method['min_recharge_amount'] ?? null),
+                'max_recharge_amount' => $this->formatLimitValue($method['max_recharge_amount'] ?? null),
+                'min_withdraw_amount' => $this->formatLimitValue($method['min_withdraw_amount'] ?? null),
+                'max_withdraw_amount' => $this->formatLimitValue($method['max_withdraw_amount'] ?? null),
                 // 默认为所有渠道添加银行列表相关字段
                 'bank_list'      => [],
                 'bank_count'     => 0,
@@ -286,6 +351,10 @@ class PayGatewayService
                 'channel' => $method['unique_tag'],
                 'name'    => $method['name'] ?? '',
                 'show'    => $method['show'] ?? 'all',
+                'min_recharge_amount' => $this->formatLimitValue($method['min_recharge_amount'] ?? null),
+                'max_recharge_amount' => $this->formatLimitValue($method['max_recharge_amount'] ?? null),
+                'min_withdraw_amount' => $this->formatLimitValue($method['min_withdraw_amount'] ?? null),
+                'max_withdraw_amount' => $this->formatLimitValue($method['max_withdraw_amount'] ?? null),
                 // 默认为所有渠道添加银行列表相关字段
                 'bank_list'      => [],
                 'bank_count'     => 0,
@@ -383,6 +452,10 @@ class PayGatewayService
                 'icon' => $method['icon'] ?? '',
                 'name' => $method['name'] ?? '',
                 'show' => $method['show'] ?? 'all',
+                'min_recharge_amount' => $this->formatLimitValue($method['min_recharge_amount'] ?? null),
+                'max_recharge_amount' => $this->formatLimitValue($method['max_recharge_amount'] ?? null),
+                'min_withdraw_amount' => $this->formatLimitValue($method['min_withdraw_amount'] ?? null),
+                'max_withdraw_amount' => $this->formatLimitValue($method['max_withdraw_amount'] ?? null),
                 // 默认为所有渠道添加银行列表相关字段
                 'bank_list' => [],
                 'bank_count' => 0,

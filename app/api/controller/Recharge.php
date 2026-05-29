@@ -198,7 +198,15 @@ class Recharge extends Base
         $param = $request->param();
         $price = isset($param['price']) ? floatval($param['price']) : floatval($param['price']);
 
-        $payType = $param['pay_type'];
+        $payType = strtolower(trim((string)($param['pay_type'] ?? '')));
+        if ($payType === '') {
+            $this->error(__('Please select payment method'));
+        }
+        try {
+            $this->getPayService()->validatePaymentAmount($payType, $price, 'recharge');
+        } catch (\Throwable $e) {
+            $this->error($e->getMessage());
+        }
         $event_name = $param['event_name'];
         //fiat_支付银行参数
         $bank_code = $param['bank_code'] ?? "";

@@ -36,4 +36,6 @@ return [
     'Vip level is 1, please upgrade to VIP2 to withdraw' => 'VIP等级为1，请升级到VIP2后再提现',
     'Amount: %s' => '金额：%s',
     'Bet sum must reach 377*25 times to unlock withdrawal' => '下注达到377*25倍解锁提现',
+    'Withdraw amount cannot be less than %s' => '提现金额不能小于 $ %s',
+    'Withdraw amount cannot exceed %s' => '提现金额不能大于 $ %s',
 ]; 

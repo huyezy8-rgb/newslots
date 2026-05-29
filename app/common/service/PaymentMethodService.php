@@ -14,7 +14,7 @@ class PaymentMethodService
         $methods = \think\facade\Db::name('payment_methods')
             ->where('status', 1)
             ->where('pay_method', 'in', ['0', '2'])
-            ->field('id,unique_tag,name,description,icon,show,field_config,validation_rules')
+            ->field('id,unique_tag,name,description,icon,show,field_config,validation_rules,min_recharge_amount,max_recharge_amount,min_withdraw_amount,max_withdraw_amount')
             ->select();
         
         $result = [];
@@ -37,7 +37,7 @@ class PaymentMethodService
                                ->where('unique_tag', $uniqueTag)
                                ->where('status', 1)
                                ->where('pay_method', 'in', ['0', '2'])
-                               ->field('id,unique_tag,name,description,icon,show,field_config,validation_rules')
+                               ->field('id,unique_tag,name,description,icon,show,field_config,validation_rules,min_recharge_amount,max_recharge_amount,min_withdraw_amount,max_withdraw_amount')
                                ->find();
         
         if (!$method) {
@@ -99,4 +99,3 @@ class PaymentMethodService
         return $configs;
     }
 }
-

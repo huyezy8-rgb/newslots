@@ -23,6 +23,13 @@ class Methods extends Backend
 
     protected string|array $quickSearchField = ['id'];
 
+    private const AMOUNT_FIELDS = [
+        'min_recharge_amount',
+        'max_recharge_amount',
+        'min_withdraw_amount',
+        'max_withdraw_amount',
+    ];
+
     public function initialize(): void
     {
         parent::initialize();
@@ -74,6 +81,10 @@ class Methods extends Backend
                 $data['field_config'] = null;
                 $data['validation_rules'] = null;
             }
+
+            $data = $this->normalizeAmountFields($data);
+            $this->validateAmountRanges($data);
+            $this->request->withPost($data);
             
             // 调用父类方法
             parent::add();
@@ -96,6 +107,10 @@ class Methods extends Backend
                 $data['field_config'] = null;
                 $data['validation_rules'] = null;
             }
+
+            $data = $this->normalizeAmountFields($data);
+            $this->validateAmountRanges($data);
+            $this->request->withPost($data);
             
             // 调用父类方法
             parent::edit();
@@ -103,5 +118,50 @@ class Methods extends Backend
         }
         
         parent::edit();
+    }
+
+    private function validateAmountRanges(array $data): void
+    {
+        $minRecharge = $this->getAmountValue($data, 'min_recharge_amount');
+        $maxRecharge = $this->getAmountValue($data, 'max_recharge_amount');
+        $minWithdraw = $this->getAmountValue($data, 'min_withdraw_amount');
+        $maxWithdraw = $this->getAmountValue($data, 'max_withdraw_amount');
+
+        if ($minRecharge !== null && $maxRecharge !== null && $minRecharge > $maxRecharge) {
+            $this->error('Minimum recharge amount cannot exceed maximum recharge amount');
+        }
+
+        if ($minWithdraw !== null && $maxWithdraw !== null && $minWithdraw > $maxWithdraw) {
+            $this->error('Minimum withdraw amount cannot exceed maximum withdraw amount');
+        }
+    }
+
+    private function normalizeAmountFields(array $data): array
+    {
+        foreach (self::AMOUNT_FIELDS as $field) {
+            if (!array_key_exists($field, $data)) {
+                continue;
+            }
+
+            if ($data[$field] === '' || $data[$field] === null) {
+                $data[$field] = null;
+                continue;
+            }
+
+            if (is_numeric($data[$field])) {
+                $data[$field] = (float)$data[$field];
+            }
+        }
+
+        return $data;
+    }
+
+    private function getAmountValue(array $data, string $field): ?float
+    {
+        if (!array_key_exists($field, $data) || $data[$field] === '' || $data[$field] === null) {
+            return null;
+        }
+
+        return is_numeric($data[$field]) ? (float)$data[$field] : null;
     }
 }
