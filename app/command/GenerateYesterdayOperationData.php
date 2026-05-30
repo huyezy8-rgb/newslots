@@ -118,6 +118,8 @@ class GenerateYesterdayOperationData extends Command
      */
     private function getDailyStats(string $date, ?int $channelId = null): array
     {
+        return (new OperationDataService())->getDailyStats($date, $channelId);
+
         // ==================== 时间范围设置 ====================
         $startTime = strtotime($date . ' 00:00:00'); // 当日开始时间
         $endTime = strtotime($date . ' 23:59:59');   // 当日结束时间

@@ -2,6 +2,7 @@
 namespace app\admin\controller;
 
 use app\common\controller\Backend;
+use app\common\service\OperationDataService;
 use think\facade\Db;
 
 class Ltv extends Backend
@@ -104,13 +105,9 @@ class Ltv extends Backend
                 $startTime = strtotime($base_date . ' 00:00:00');
                 $endTime = strtotime($target_date . ' 23:59:59');
 
-                // 获取这些用户在注册日期到目标日期之间的充值总额
-                $totalRevenue = Db::name('recharge_orders')
-                    ->where('pay_status', 1) // 支付成功
-                    ->where('created_at', '>=', $startTime)
-                    ->where('created_at', '<=', $endTime)
-                    ->whereIn('user_id', $baseUserIds)
-                    ->sum('amount');
+                // 获取这些用户在注册日期到目标日期之间的成功充值总额
+                $rechargeStats = OperationDataService::getPaidRechargeStats($startTime, $endTime, $baseUserIds);
+                $totalRevenue = $rechargeStats['paid_amount'];
 
                 // LTV = 累计收入 / 注册用户数
                 $ltv = $base_count > 0 ? ($totalRevenue / $base_count) : 0;

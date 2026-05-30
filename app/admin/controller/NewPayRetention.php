@@ -5,7 +5,7 @@ use app\common\controller\Backend;
 use app\common\service\UserActiveService;
 use think\facade\Db;
 
-class PayRetention extends Backend
+class NewPayRetention extends Backend
 {
     public function index(): void
     {
@@ -14,8 +14,13 @@ class PayRetention extends Backend
         if (strtotime($end_date) > strtotime($today)) {
             $end_date = $today;
         }
+
+        $minCreateTime = Db::name('account')->min('create_time');
+        $minDate = $minCreateTime ? date('Y-m-d', is_numeric($minCreateTime) ? $minCreateTime : strtotime($minCreateTime)) : date('Y-m-d');
         $default_start = strtotime($end_date) - 86400 * 29;
-        $start_date = $this->request->get('start_date', date('Y-m-d', $default_start));
+        $default_start_date = max(strtotime($minDate), $default_start);
+        $start_date = $this->request->get('start_date', date('Y-m-d', $default_start_date));
+
         $channel_id = $this->request->get('channel_id', null);
         if ($this->getCurrentAdminChannelId() !== null) {
             $channel_id = $this->getCurrentAdminChannelId();
@@ -25,8 +30,6 @@ class PayRetention extends Backend
             return;
         }
 
-        $minCreateTime = Db::name('account')->min('create_time');
-        $minDate = $minCreateTime ? date('Y-m-d', is_numeric($minCreateTime) ? $minCreateTime : strtotime($minCreateTime)) : date('Y-m-d');
         if (strtotime($start_date) < strtotime($minDate)) {
             $start_date = $minDate;
         }
@@ -50,18 +53,32 @@ class PayRetention extends Backend
 
         $result = [];
         foreach ($dateList as $base_date) {
-            $payUserQuery = Db::name('recharge_orders')
-                ->where('pay_status', 1)
-                ->whereTime('created_at', 'between', [$base_date . ' 00:00:00', $base_date . ' 23:59:59']);
+            $startTime = strtotime($base_date . ' 00:00:00');
+            $endTime = strtotime($base_date . ' 23:59:59');
+
+            $newUserQuery = Db::name('account')
+                ->where('create_time', '>=', $startTime)
+                ->where('create_time', '<=', $endTime);
             if ($channel_id) {
-                $payUserQuery->where('channel_id', $channel_id);
+                $newUserQuery->where('channel_id', $channel_id);
             }
-            $payUserIds = $payUserQuery->distinct(true)->column('user_id');
-            $pay_count = count($payUserIds);
+            $newUserIds = $newUserQuery->column('id');
+
+            $newPayUserIds = [];
+            if (!empty($newUserIds)) {
+                $newPayUserIds = Db::name('recharge_orders')
+                    ->where('pay_status', 1)
+                    ->where('created_at', '>=', $startTime)
+                    ->where('created_at', '<=', $endTime)
+                    ->whereIn('user_id', $newUserIds)
+                    ->distinct(true)
+                    ->column('user_id');
+            }
+            $base_count = count($newPayUserIds);
 
             $row = [
                 'date' => $base_date,
-                'D1' => $pay_count,
+                'D1' => $base_count,
             ];
 
             for ($i = 2; $i <= $days; $i++) {
@@ -71,8 +88,8 @@ class PayRetention extends Backend
                     continue;
                 }
 
-                $active_count = count(UserActiveService::getActiveUserIdsByDate($targetDate, $payUserIds));
-                $row['D' . $i] = $pay_count > 0 && $active_count > 0 ? round($active_count / $pay_count * 100, 2) . '%' : '0%';
+                $active_count = count(UserActiveService::getActiveUserIdsByDate($targetDate, $newPayUserIds));
+                $row['D' . $i] = $base_count > 0 && $active_count > 0 ? round($active_count / $base_count * 100, 2) . '%' : '0%';
             }
             $result[] = $row;
         }
