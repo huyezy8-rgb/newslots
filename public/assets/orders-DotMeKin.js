@@ -1,0 +1,1 @@
+const e={id:"主键",user_id:"用户ID",channel_id:"渠道ID",amount:"提现金额",real_amount:"实际到账金额",fee:"手续费",wallet_type:"钱包类型",account_info:"提现账户信息",status:"状态",audit_remark:"审核备注",create_time:"申请时间",update_time:"更新时间",passConfirm:"确认通过该提现订单？",rejectConfirm:"确认驳回该提现订单？","quick Search Fields":"主键"};export{e as default};
