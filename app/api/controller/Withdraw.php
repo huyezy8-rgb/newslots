@@ -8,6 +8,7 @@ use app\common\controller\Frontend;
 use app\common\model\withdraw\Orders;
 use app\common\service\ChannelInfoService;
 use app\common\service\PayGatewayService;
+use app\common\service\PaymentRouteSelector;
 use app\common\service\AccountService;
 use think\facade\Db;
 
@@ -140,11 +141,11 @@ class Withdraw extends Base
             ['pay_method', 'in', ['0', '2']] // 0=所有方式，2=提现
         ])->find();
 
-        if (!$paymentMethod) {
+        if (false && !$paymentMethod) {
             $this->error(__('Invalid withdraw method'));
         }
         try {
-            (new PayGatewayService())->validatePaymentAmount($pay_type, $amount, 'withdraw');
+            $paymentRoute = (new PaymentRouteSelector())->selectRoute($pay_type, 'withdraw', $amount, (int)$this->userInfo['id']);
         } catch (\Throwable $e) {
             $this->error($e->getMessage());
         }
@@ -160,7 +161,7 @@ class Withdraw extends Base
 
         switch ($typeid) {
             case 3:
-                $res=$this->handleRechargeWalletWithdraw($params, $this->userInfo,$accountInfo,$pay_type);
+                $res=$this->handleRechargeWalletWithdraw($params, $this->userInfo,$accountInfo,$pay_type,$paymentRoute);
                 break;
             case 4:
                 // 上面已处理，这里保底不应触发
@@ -175,7 +176,7 @@ class Withdraw extends Base
         $this->success($res['msg']);
     }
 
-    protected function handleRechargeWalletWithdraw(array $params, $user,$accountInfo,$pay_type)
+    protected function handleRechargeWalletWithdraw(array $params, $user,$accountInfo,$pay_type,array $paymentRoute)
     { //获取提现记录
         $order=Orders::where(['user_id' => $user['id'],'status'=>0,'wallet_type'=>'recharge_wallet'])->find();
         if ($order) {
@@ -258,6 +259,9 @@ class Withdraw extends Base
                 'real_amount'   => $realAmount,
                 'fee'           => $fee,
                 'pay_type'      => $pay_type,
+                'payment_channel_code' => $paymentRoute['payment_channel_code'],
+                'payment_method_id' => $paymentRoute['payment_method_id'],
+                'payment_channel_weight_snapshot' => $paymentRoute['weight_snapshot'],
                 'wallet_type'   => $walletField,
                 'account_info'  => $accountInfo,
                 'status'        => 0,

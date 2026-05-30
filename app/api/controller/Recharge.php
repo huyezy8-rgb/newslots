@@ -12,6 +12,7 @@ use app\common\model\ChannelList;
 use app\common\model\recharge\Config;
 use app\common\model\recharge\Orders;
 use app\common\service\PayGatewayService;
+use app\common\service\PaymentRouteSelector;
 use app\common\service\ChannelInfoService;
 use app\common\service\TestPaymentCallbackService;
 use app\Request;
@@ -75,6 +76,9 @@ class Recharge extends Base
         }
 
         $payChannels = json_decode($config['pay_channels'] ?? '[]', true) ?: [];
+        if (!$payChannels) {
+            return $regAmount;
+        }
         $channels = array_column($payChannels, 'channel');
         $result = array_filter($channels, fn($item) => strcasecmp($item, $payType) === 0);
         $index = array_key_first($result);
@@ -520,6 +524,7 @@ class Recharge extends Base
 
             //过期时间半小时
             $expiredTime = 1800;
+            $paymentRoute = (new PaymentRouteSelector())->selectRoute($payType, 'recharge', $price, (int)$this->userInfo['id']);
             //创建记录
             $data = [
                 'order_no'       => $orderno,
@@ -531,6 +536,9 @@ class Recharge extends Base
                 'pay_status'     => 0,
                 'expired_time'   => time() + $expiredTime + 120, //误差2分钟
                 'event_name'     => $event_name,
+                'payment_channel_code' => $paymentRoute['payment_channel_code'],
+                'payment_method_id' => $paymentRoute['payment_method_id'],
+                'payment_channel_weight_snapshot' => $paymentRoute['weight_snapshot'],
                 'created_at'     => time(),
                 'updated_at'     => time(),
             ];
@@ -541,6 +549,24 @@ class Recharge extends Base
         $res = null;
 $response = null;
 
+if (true) {
+    $res = $this->getPayService()->createOrder([
+        'order_no' => $orderno,
+        'amount' => $price,
+        'pay_type' => $payType,
+        'route' => $paymentRoute,
+        'extra' => [
+            'id' => $this->userInfo['id'],
+            'return_url' => $return_url,
+            'expiredTime' => $expiredTime,
+        ],
+    ]);
+
+    if ($this->isTestPay($payType)) {
+        $res['data']['cashierUrl'] = $this->buildTestPayCashierUrl($orderno, $price, time() + $expiredTime, $return_url);
+    }
+    $response = json_encode($res, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+} else
 /**
  * 临时兼容：
  * 现在后台启用的是 SuccusPay，但前端/数据库里可能传的是 saxpay / cashapp / card / zelle / paypal / googleorapple / btclightning

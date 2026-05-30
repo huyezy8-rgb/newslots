@@ -19,13 +19,17 @@ class PaymentMethodService
         
         $result = [];
         foreach ($methods as $method) {
+            $key = strtolower((string)$method['unique_tag']);
+            if (isset($result[$key])) {
+                continue;
+            }
             $data = $method;
             $data['field_config'] = is_string($method['field_config']) ? json_decode($method['field_config'], true) : ($method['field_config'] ?: []);
             $data['validation_rules'] = is_string($method['validation_rules']) ? json_decode($method['validation_rules'], true) : ($method['validation_rules'] ?: []);
-            $result[] = $data;
+            $result[$key] = $data;
         }
         
-        return $result;
+        return array_values($result);
     }
     
     /**

@@ -69,6 +69,15 @@ const baTable = new baTableClass(
                 sortable: false,
             },
             {
+                label: t('recharge.orders.payment_channel_code'),
+                prop: 'payment_channel_code',
+                align: 'center',
+                operatorPlaceholder: t('Fuzzy query'),
+                operator: 'LIKE',
+                sortable: false,
+                width: 140,
+            },
+            {
                 label: t('recharge.orders.pay_status'),
                 prop: 'pay_status',
                 align: 'center',

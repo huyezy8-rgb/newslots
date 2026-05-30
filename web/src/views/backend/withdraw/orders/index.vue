@@ -192,6 +192,7 @@ const baTable = new baTableClass(
           { label: t('withdraw.orders.user_id'), prop: 'user_id', align: 'center', operator: 'LIKE', operatorPlaceholder: t('Fuzzy query'), sortable: true },
           { label: "订单编号", prop: 'order_no', align: 'center',width: 100,  operator: 'LIKE'},
           { label: "提现方式", prop: 'pay_type', align: 'center',width: 100,  operator: 'LIKE'},
+          { label: t('withdraw.orders.payment_channel_code'), prop: 'payment_channel_code', align: 'center', width: 140, operator: 'LIKE' },
           {
               label: t('withdraw.orders.amount'),
               prop: 'amount',

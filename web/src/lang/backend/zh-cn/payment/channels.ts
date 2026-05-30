@@ -4,6 +4,7 @@ export default {
     code: '渠道代码',
     description: '渠道描述',
     config: '渠道配置(JSON格式)',
+    weight: '渠道权重',
     status: '状态',
     'status 0': '禁用',
     'status 1': '启用',

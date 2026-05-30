@@ -116,6 +116,13 @@ class Orders extends Backend
                 ['pay_method', 'in', ['0', '2']] // 0=所有方式，2=提现
             ])->find();
             
+            if (!empty($order->payment_method_id)) {
+                $routeMethod = Methods::where('id', $order->payment_method_id)->where('status', 1)->find();
+                if ($routeMethod) {
+                    $paymentMethod = $routeMethod;
+                }
+            }
+
             if (!$paymentMethod) {
                 throw new \Exception('无效的提现方式：' . $payType);
             }
@@ -303,14 +310,23 @@ class Orders extends Backend
             }
 
 
-            if (strtolower((string)$payType) === 'testpay') {
+            if (true) {
+                $routeChannelCode = $order->payment_channel_code ?: $paymentMethod->channel_code;
+                $route = [
+                    'payment_method_id' => (int)($order->payment_method_id ?: $paymentMethod->id),
+                    'payment_channel_code' => $routeChannelCode,
+                    'driver_name' => $routeChannelCode,
+                    'way_code' => (string)$paymentMethod->code,
+                    'weight_snapshot' => (int)($order->payment_channel_weight_snapshot ?? 0),
+                ];
                 $res = $this->getPayService()->createTransfer([
                     'order_no' => $orderno,
                     'amount' => $order->real_amount,
                     'pay_type' => $payType,
+                    'route' => $route,
                     'extra' => $extraParams,
                 ]);
-                if (($res['code'] ?? 1) != 0) {
+                if (($res['code'] ?? 0) != 0) {
                     throw new \Exception($res['message'] ?? 'TestPay代付创建失败');
                 }
                 $platform_order_no = $res['data']['transferOrderNo'] ?? $orderno;
@@ -412,6 +428,15 @@ class Orders extends Backend
                 //不同提现 统一返回相应字段
                 $order->platform_order_no = $platform_order_no ?? $orderno;
                 $order->callback_data = $response;
+                if (empty($order->payment_channel_code)) {
+                    $order->payment_channel_code = $route['payment_channel_code'] ?? null;
+                }
+                if (empty($order->payment_method_id)) {
+                    $order->payment_method_id = $route['payment_method_id'] ?? null;
+                }
+                if (empty($order->payment_channel_weight_snapshot)) {
+                    $order->payment_channel_weight_snapshot = $route['weight_snapshot'] ?? null;
+                }
                 $order->status = 1; // 1=已通过
                 $order->save();
                 $order->commit();

@@ -5,6 +5,7 @@ export default {
     channel_id: 'channel_id',
     amount: 'amount',
     pay_type: 'pay_type',
+    payment_channel_code: 'payment_channel_code',
     pay_status: 'pay_status',
     remark: 'remark',
     paid_at: 'paid_at',

@@ -8,13 +8,13 @@ use think\Request;
 
 abstract class Driver
 {
-    public static function instance(string $type): Driver
+    public static function instance(string $type, ?string $channelCode = null): Driver
     {
         $class = __NAMESPACE__ . '\\' . ucfirst($type) . 'Pay';
         if (!class_exists($class)) {
             throw new \Exception("支付方式 {$type} 不存在");
         }
-        return new $class;
+        return new $class($channelCode);
     }
 
     abstract public function createOrder(string $orderNo, float $amount, array $extra = []): array;

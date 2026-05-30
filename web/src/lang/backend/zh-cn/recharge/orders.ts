@@ -5,6 +5,7 @@ export default {
     channel_id: '渠道ID',
     amount: '充值金额（单位:元）',
     pay_type: '支付方式',
+    payment_channel_code: '实际支付渠道',
     pay_status: '支付状态',
     remark: '备注信息',
     paid_at: '支付时间',
