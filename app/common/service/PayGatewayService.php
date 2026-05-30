@@ -153,9 +153,15 @@ class PayGatewayService
      * 提现不需要限制条件，只根据pay_method筛选（0=所有方式，2=提现）
      * @return array
      */
-    public function getAvailableWithdrawChannels(): array
+    public function getAvailableWithdrawChannels(?float $amount = null): array
     {
-        return (new PaymentRouteSelector())->getAvailableMethods('withdraw');
+        $smartControl = new PaymentSmartControlService();
+        $payTypes = $smartControl->getWithdrawRestrictedPayTypes($amount);
+        return (new PaymentRouteSelector())->getAvailableMethods('withdraw', 0, [
+            'amount' => $amount,
+            'allowed_pay_types' => $payTypes,
+            'smart_control_hit' => !empty($payTypes),
+        ]);
         // 获取所有启用的提现方式（pay_method = 0 或 2）
         $methods = $this->getEnabledWithdrawMethods();
         
@@ -228,10 +234,10 @@ class PayGatewayService
         ];
     }
 
-    public function validatePaymentAmount(string $payType, float $amount, string $type): void
+    public function validatePaymentAmount(string $payType, float $amount, string $type, int $userId = 0, array $options = []): void
     {
         $scene = $type === 'withdraw' ? 'withdraw' : 'recharge';
-        $routes = (new PaymentRouteSelector())->getCandidateRoutes($payType, $scene, $amount);
+        $routes = (new PaymentRouteSelector())->getCandidateRoutes($payType, $scene, $amount, $userId, $options);
         if (!$routes) {
             throw new \Exception(__('Payment method param error'));
         }
