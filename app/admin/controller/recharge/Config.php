@@ -70,7 +70,7 @@ class Config extends Backend
 
                 return $jsonStr;
             };
-            $jsonFields = ['amount_list', 'pay_channels', 'reward_value'];
+            $jsonFields = ['amount_list', 'reward_value'];
             foreach ($jsonFields as $field) {
                 if (isset($data[$field])) {
                     $data[$field] = $cleanJson($data[$field]);

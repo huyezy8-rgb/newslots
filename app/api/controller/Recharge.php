@@ -71,24 +71,7 @@ class Recharge extends Base
 
     private function applyPaymentChannelReward(array $config, string $payType, float $price, $regAmount)
     {
-        if ($this->isTestPay($payType)) {
-            return $regAmount;
-        }
-
-        $payChannels = json_decode($config['pay_channels'] ?? '[]', true) ?: [];
-        if (!$payChannels) {
-            return $regAmount;
-        }
-        $channels = array_column($payChannels, 'channel');
-        $result = array_filter($channels, fn($item) => strcasecmp($item, $payType) === 0);
-        $index = array_key_first($result);
-
-        if ($index === null) {
-            $this->error(__('Payment method param error'));
-        }
-
-        $rewardPercent = floatval($payChannels[$index]['reward_percent'] ?? 0);
-        return bcadd($regAmount, bcmul($price, $rewardPercent / 100, 2), 2);
+        return $regAmount;
     }
 
     private function buildTestPayCashierUrl(string $orderNo, float $amount, int $expiredAt, string $returnUrl): string
@@ -147,13 +130,12 @@ class Recharge extends Base
 
         // JSON字段转成数组方便前端处理（可选）
         $config['amount_list'] = json_decode($config['amount_list'], true) ?: [];
-        $config['pay_channels'] = json_decode($config['pay_channels'], true) ?: [];
         $config['reward_value'] = json_decode($config['reward_value'], true) ?: [];
 
         // 过滤可用支付方式
         $userId = $this->userInfo['id'] ?? 0;
         $service = new \app\common\service\PayGatewayService();
-        $config['pay_channels'] = $service->getAvailablePayChannels($userId, $config['pay_channels']);
+        $config['pay_channels'] = $service->getAvailablePayChannels($userId);
 
         // 返回成功响应
         $this->success(__('Get recharge config success'), $config);
