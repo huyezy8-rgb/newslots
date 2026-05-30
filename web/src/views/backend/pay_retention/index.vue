@@ -54,6 +54,8 @@
 import { ref, computed, onMounted } from 'vue';
 import { getPayRetentionData } from '/@/api/backend/pay_retention';
 import createAxios from '/@/utils/axios';
+import { exportRowsToCsv } from '/@/utils/exportCsv'
+import dayjs from 'dayjs'
 
 const dateRange = ref<string[]>([]);
 const channelId = ref('');
@@ -117,11 +119,23 @@ const handlePageChange = (p: number) => {
 
 const exportData = async () => {
   exportLoading.value = true;
-  // TODO: 实现导出功能
-  setTimeout(() => {
+  try {
+    const params: any = {
+      page: 1,
+      limit: total.value || limit.value,
+    };
+    if (dateRange.value && dateRange.value.length === 2) {
+      params.start_date = dateRange.value[0];
+      params.end_date = dateRange.value[1];
+    }
+    if (channelId.value) params.channel_id = channelId.value;
+    const res = await getPayRetentionData(params);
+    const rows = res.data.list || [];
+    const headers = Object.keys(rows[0] || tableData.value[0] || {}).map((key) => ({ label: key === 'date' ? '日期' : key, prop: key }));
+    exportRowsToCsv(`pay_retention_${dayjs().format('YYYYMMDDHHmmss')}.csv`, headers, rows);
+  } finally {
     exportLoading.value = false;
-    alert('TODO: 实现导出功能');
-  }, 800);
+  }
 };
 
 onMounted(() => {

@@ -8,6 +8,7 @@ import type { baTableApi } from '/@/api/common'
 import { findIndexRow } from '/@/components/table'
 import { i18n } from '/@/lang/index'
 import { auth, getArrayKey } from '/@/utils/common'
+import { downloadBlob } from '/@/utils/exportCsv'
 
 /**
  * 表格管家类
@@ -370,6 +371,12 @@ export default class baTable {
                 },
             ],
             [
+                'export',
+                () => {
+                    this.exportData()
+                },
+            ],
+            [
                 'unfold',
                 () => {
                     if (!this.table.ref) {
@@ -411,6 +418,43 @@ export default class baTable {
      * el-table 的 `default-sort` 在自定义排序时无效
      * 此方法只有在表格数据请求结束后执行有效
      */
+    exportData = () => {
+        const columns = this.getExportColumns()
+        return this.api.exportData(this.table.filter, columns).then(async (response: any) => {
+            const blob = response.data as Blob
+            const contentType = response.headers?.['content-type'] || ''
+
+            if (contentType.includes('application/json')) {
+                const result = JSON.parse(await blob.text())
+                ElNotification({
+                    type: result.code === 1 ? 'success' : 'error',
+                    message: result.msg || '无数据',
+                })
+                return
+            }
+
+            downloadBlob(blob, this.getExportFilename(response.headers?.['content-disposition']))
+        })
+    }
+
+    getExportColumns = () => {
+        return this.table.column
+            .filter((item) => item.prop && item.type !== 'selection' && item.render !== 'buttons' && item.show !== false)
+            .map((item) => ({
+                prop: item.prop!,
+                label: String(item.label ?? item.prop),
+            }))
+    }
+
+    getExportFilename = (contentDisposition = '') => {
+        const filenameMatch = contentDisposition.match(/filename\*=UTF-8''([^;]+)/)
+        if (filenameMatch?.[1]) {
+            return decodeURIComponent(filenameMatch[1])
+        }
+
+        return 'export.csv'
+    }
+
     initSort = () => {
         if (this.table.defaultOrder && this.table.defaultOrder.prop) {
             if (!this.table.ref) {

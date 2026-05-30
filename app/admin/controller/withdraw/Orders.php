@@ -77,6 +77,14 @@ class Orders extends Backend
         ]);
     }
 
+    protected function exportQueryBuilder(): array
+    {
+        list($where, $alias, $limit, $order) = $this->queryBuilder();
+        $where = $this->addChannelFilter($where, 'channel_id');
+
+        return [$where, $alias, $limit, $order];
+    }
+
     /**
      * 通过提现订单
      */

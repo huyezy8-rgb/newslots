@@ -301,6 +301,7 @@ export class baTableApi {
             ['edit', controllerUrl + 'edit'],
             ['del', controllerUrl + 'del'],
             ['sortable', controllerUrl + 'sortable'],
+            ['export', controllerUrl + 'export'],
         ])
     }
 
@@ -374,5 +375,25 @@ export class baTableApi {
             method: 'post',
             data,
         })
+    }
+
+    /**
+     * 导出表格数据
+     */
+    exportData(filter: BaTable['filter'] = {}, columns: { prop: string; label: string }[] = []) {
+        return createAxios(
+            {
+                url: this.actionUrl.get('export'),
+                method: 'get',
+                params: {
+                    ...filter,
+                    columns,
+                },
+                responseType: 'blob',
+            },
+            {
+                reductDataFormat: false,
+            }
+        )
     }
 }

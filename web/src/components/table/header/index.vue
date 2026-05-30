@@ -50,6 +50,16 @@
             </template>
         </el-popconfirm>
         <el-tooltip
+            v-if="props.buttons.includes('export') || props.buttons.includes('comSearch') || props.buttons.includes('quickSearch')"
+            content="导出"
+            placement="top"
+        >
+            <el-button v-blur @click="onAction('export')" class="table-header-operate" type="success">
+                <Icon name="fa fa-download" />
+                <span class="table-header-operate-text">导出</span>
+            </el-button>
+        </el-tooltip>
+        <el-tooltip
             v-if="props.buttons.includes('unfold')"
             :content="(baTable.table.expandAll ? t('Shrink') : t('Open')) + t('All submenus')"
             placement="top"
@@ -141,7 +151,7 @@ interface Props {
 }
 const props = withDefaults(defineProps<Props>(), {
     buttons: () => {
-        return ['refresh', 'add', 'edit', 'delete']
+        return ['refresh', 'add', 'edit', 'delete', 'export']
     },
     quickSearchPlaceholder: '',
 })

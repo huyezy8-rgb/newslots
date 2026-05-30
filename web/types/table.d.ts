@@ -419,7 +419,7 @@ declare global {
     /**
      * 表头支持的按钮
      */
-    type HeaderOptButton = 'refresh' | 'add' | 'edit' | 'delete' | 'unfold' | 'comSearch' | 'quickSearch' | 'columnDisplay'
+    type HeaderOptButton = 'refresh' | 'add' | 'edit' | 'delete' | 'export' | 'unfold' | 'comSearch' | 'quickSearch' | 'columnDisplay'
 
     /**
      * 公共搜索操作符支持的值

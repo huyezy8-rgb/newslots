@@ -2,6 +2,7 @@
 
 namespace app\admin\library\traits;
 
+use app\common\service\CsvExportService;
 use app\common\traits\ChannelFilter;
 use Throwable;
 
@@ -57,6 +58,69 @@ trait Backend
             'total'  => $res->total(),
             'remark' => get_route_remark(),
         ]);
+    }
+
+    /**
+     * 导出
+     * @throws Throwable
+     */
+    public function export(): void
+    {
+        list($where, $alias, $limit, $order) = $this->exportQueryBuilder();
+        $rows = $this->model
+            ->field($this->indexField)
+            ->withJoin($this->withJoinTable, $this->withJoinType)
+            ->alias($alias)
+            ->where($where)
+            ->order($order)
+            ->select()
+            ->toArray();
+
+        if (empty($rows)) {
+            $this->error('无数据');
+        }
+
+        try {
+            CsvExportService::download($this->exportFilename(), $this->exportHeaders($rows[0]), $rows);
+        } catch (\InvalidArgumentException $e) {
+            $this->error($e->getMessage());
+        }
+    }
+
+    protected function exportQueryBuilder(): array
+    {
+        return $this->queryBuilder();
+    }
+
+    protected function exportFilename(): string
+    {
+        $name = str_replace(['\\', '/', '.'], '_', $this->request->controller(true));
+        return $name . '_' . date('YmdHis') . '.csv';
+    }
+
+    protected function exportHeaders(array $sampleRow): array
+    {
+        $columns = $this->request->get('columns/a', []);
+        $headers = [];
+
+        foreach ($columns as $column) {
+            if (!is_array($column) || empty($column['prop'])) {
+                continue;
+            }
+
+            $prop = (string)$column['prop'];
+            if (!preg_match('/^[A-Za-z0-9_.]+$/', $prop)) {
+                continue;
+            }
+
+            $headers[$prop] = (string)($column['label'] ?? $prop);
+        }
+
+        if (!empty($headers)) {
+            return $headers;
+        }
+
+        return array_combine(array_keys($sampleRow), array_keys($sampleRow));
     }
 
     /**

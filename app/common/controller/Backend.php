@@ -159,7 +159,10 @@ class Backend extends Api
             }
             if (!action_in_arr($this->noNeedPermission)) {
                 $routePath = ($this->app->request->controllerPath ?? '') . '/' . $this->request->action(true);
-                if (!$this->auth->check($routePath)) {
+                $checkPath = $this->request->action(true) === 'export'
+                    ? ($this->app->request->controllerPath ?? '') . '/index'
+                    : $routePath;
+                if (!$this->auth->check($checkPath)) {
                     $this->error(__('You have no permission'), [], 401);
                 }
             }

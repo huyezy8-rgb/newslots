@@ -116,6 +116,7 @@ import createAxios from '/@/utils/axios'
 import { useAdminInfo } from '/@/stores/adminInfo'
 import dayjs from 'dayjs'
 import { computed } from 'vue'
+import { exportRowsToCsv, type CsvHeader } from '/@/utils/exportCsv'
 
 const { t } = useI18n()
 
@@ -198,9 +199,16 @@ function handlePageChange(page: number) {
     fetchData()
 }
 
-function exportData() {
-    // TODO: 实现导出功能，可调用后端导出接口或前端导出csv
-    alert('TODO: 实现导出功能')
+async function exportData() {
+    const res = await fetchOperationData({
+        dateRange: filterData.dateRange,
+        channel_id: filterData.channel_id,
+        tag: filterData.tag,
+        page: 1,
+        pageSize: pagination.total || pagination.pageSize,
+    })
+
+    exportRowsToCsv(`operation_${dayjs().format('YYYYMMDDHHmmss')}.csv`, flattenColumns(res.data.columns || columns.value), res.data.list || [])
 }
 
 function formatCell(val: any, type: string) {
@@ -229,6 +237,19 @@ const todayUpdateTime = computed(() => {
   if (todayRow.value.update_time) return dayjs(todayRow.value.update_time * 1000).format('YYYY-MM-DD HH:mm:ss')
   return ''
 })
+
+function flattenColumns(items: any[], prefix = ''): CsvHeader[] {
+    const headers: CsvHeader[] = []
+    items.forEach((item) => {
+        const label = prefix ? `${prefix}-${item.label}` : item.label
+        if (item.children) {
+            headers.push(...flattenColumns(item.children, label))
+        } else if (item.prop) {
+            headers.push({ label, prop: item.prop })
+        }
+    })
+    return headers
+}
 
 onMounted(() => {
     // 获取渠道列表
