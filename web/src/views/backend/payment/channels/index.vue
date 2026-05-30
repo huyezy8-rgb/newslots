@@ -73,14 +73,6 @@ const baTable = new baTableClass(
                 replaceValue: { '0': t('payment.channels.status 0'), '1': t('payment.channels.status 1') },
             },
             {
-                label: t('payment.channels.weight'),
-                prop: 'weight',
-                align: 'center',
-                operator: 'RANGE',
-                sortable: 'custom',
-                width: 110,
-            },
-            {
                 label: t('payment.channels.update_time'),
                 prop: 'update_time',
                 align: 'center',
@@ -95,7 +87,7 @@ const baTable = new baTableClass(
         dblClickNotEditColumn: [undefined, 'status'],
     },
     {
-        defaultItems: { status: '1', weight: 100 },
+        defaultItems: { status: '1' },
     }
 )
 

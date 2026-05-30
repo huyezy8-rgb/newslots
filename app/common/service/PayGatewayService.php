@@ -22,7 +22,7 @@ class PayGatewayService
      */
     public function getWayCode($payType)
     {
-        $code = Methods::where(['unique_tag'=>strtolower($payType), 'status'=>1])->value('code');
+        $code = Methods::where(['unique_tag'=>$payType, 'status'=>1])->value('code');
         if(!$code){
             throw new \Exception('支付方式未开启');
 
@@ -35,7 +35,7 @@ class PayGatewayService
      */
     public function getDriverName($payType)
     {
-        $channel_code = Methods::where(['unique_tag'=>strtolower($payType), 'status'=>1])->value('channel_code');
+        $channel_code = Methods::where(['unique_tag'=>$payType, 'status'=>1])->value('channel_code');
         if(!$channel_code){
             throw new \Exception('支付方式未开启');
 
@@ -51,15 +51,14 @@ class PayGatewayService
      */
     public function createOrder(array $data): array
     {
-        if (empty($data['pay_type']) || empty($data['order_no']) || empty($data['amount'])) {
+        if (empty($data['pay_type']) || empty($data['order_no']) || empty($data['amount'] || empty($data['extra'] ))) {
             throw new \Exception(__('service.incomplete_parameters'));
         }
         $payType = strtolower($data['pay_type']);
-        $extra = $data['extra'] ?? [];
-        $route = $data['route'] ?? (new PaymentRouteSelector())->selectRoute($payType, 'recharge', (float)$data['amount'], (int)($extra['id'] ?? 0));
-        $extra['wayCode'] = $route['way_code'];
-        $pay = Driver::instance($route['driver_name'], $route['payment_channel_code']);
-        return $pay->createOrder($data['order_no'], (float)$data['amount'], $extra);
+        $data['extra']['wayCode'] = $this->getWayCode($payType);
+        $driverName = $this->getDriverName($payType);
+        $pay = Driver::instance($driverName);
+        return $pay->createOrder($data['order_no'], (float)$data['amount'],$data['extra']);
     }
 
     /**
@@ -74,8 +73,8 @@ class PayGatewayService
             throw new \Exception(__('service.incomplete_parameters'));
         }
         $payType = strtolower($data['pay_type']);
-        $driverName = $data['payment_channel_code'] ?? $this->getDriverName($payType);
-        $pay = Driver::instance($driverName, $driverName);
+        $driverName = $this->getDriverName($payType);
+        $pay = Driver::instance($driverName);
         return $pay->close($data['order_no']);
     }
 
@@ -87,15 +86,14 @@ class PayGatewayService
      */
     public function createTransfer(array $data): array
     {
-        if (empty($data['pay_type']) || empty($data['order_no']) || empty($data['amount'])) {
+        if (empty($data['pay_type']) || empty($data['order_no']) || empty($data['amount'] || empty($data['extra'] ))) {
             throw new \Exception(__('service.incomplete_parameters'));
         }
         $payType = strtolower($data['pay_type']);
-        $extra = $data['extra'] ?? [];
-        $route = $data['route'] ?? (new PaymentRouteSelector())->selectRoute($payType, 'withdraw', (float)$data['amount'], (int)($extra['id'] ?? 0));
-        $extra['wayCode'] = $route['way_code'];
-        $pay = Driver::instance($route['driver_name'], $route['payment_channel_code']);
-        return $pay->createTransfer($data['order_no'], (float)$data['amount'], $extra);
+        $data['extra']['wayCode'] = $this->getWayCode($payType);
+        $driverName = $this->getDriverName($payType);
+        $pay = Driver::instance($driverName);
+        return $pay->createTransfer($data['order_no'], (float)$data['amount'],$data['extra']);
     }
 
     /**
@@ -119,7 +117,6 @@ class PayGatewayService
      */
     public function getAvailablePayChannels($userId, $payChannels)
     {
-        return (new PaymentRouteSelector())->getAvailableMethods('recharge', (int)$userId, $payChannels ?: []);
         // 参数验证
         if (empty($userId)) {
             return [];
@@ -155,7 +152,6 @@ class PayGatewayService
      */
     public function getAvailableWithdrawChannels(): array
     {
-        return (new PaymentRouteSelector())->getAvailableMethods('withdraw');
         // 获取所有启用的提现方式（pay_method = 0 或 2）
         $methods = $this->getEnabledWithdrawMethods();
         
@@ -230,13 +226,6 @@ class PayGatewayService
 
     public function validatePaymentAmount(string $payType, float $amount, string $type): void
     {
-        $scene = $type === 'withdraw' ? 'withdraw' : 'recharge';
-        $routes = (new PaymentRouteSelector())->getCandidateRoutes($payType, $scene, $amount);
-        if (!$routes) {
-            throw new \Exception(__('Payment method param error'));
-        }
-        return;
-
         $limits = $this->getPaymentMethodAmountLimits($payType);
 
         if ($type === 'recharge') {

@@ -17,15 +17,13 @@ class AmoPay extends Driver
     protected string $clientId;
     protected string $secretKey;
     protected string $api;
-    protected string $channelCode;
     protected const JWT_ALGORITHM = 'HS256';
     protected const DEFAULT_CRYPTO = 'USDT';
     protected const DEFAULT_NETWORK = 'BSC';
     protected const DEFAULT_PAYMENT_METHOD = '10001';
 
-    public function __construct(?string $channelCode = null)
+    public function __construct()
     {
-        $this->channelCode = $channelCode ?: 'Amo';
         $this->getConfig();
 
         if (empty($this->clientId) || empty($this->secretKey)) {
@@ -36,7 +34,7 @@ class AmoPay extends Driver
     }
     public function getConfig()
     {
-        $config = Channels::where(['code' => $this->channelCode, 'status' => 1])->value('config');
+        $config = Channels::where(['code'=>"Amo", 'status'=>1])->value('config');
         if(empty($config)){
             throw new \Exception('支付渠道未开启');
 

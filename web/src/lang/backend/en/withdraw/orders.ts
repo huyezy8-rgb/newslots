@@ -7,7 +7,6 @@ export default {
     fee: 'fee',
     wallet_type: 'wallet_type',
     account_info: 'account_info',
-    payment_channel_code: 'payment_channel_code',
     status: 'status',
     audit_remark: 'audit_remark',
     create_time: 'create_time',

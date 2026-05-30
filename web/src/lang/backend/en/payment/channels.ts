@@ -4,7 +4,6 @@ export default {
     code: 'code',
     description: 'description',
     config: 'config',
-    weight: 'weight',
     status: 'status',
     'status 0': 'status 0',
     'status 1': 'status 1',

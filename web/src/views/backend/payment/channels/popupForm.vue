@@ -100,14 +100,6 @@
                         :input-attr="{ content: { '0': t('payment.channels.status 0'), '1': t('payment.channels.status 1') } }"
                     />
                     <FormItem
-                        :label="t('payment.channels.weight')"
-                        type="number"
-                        v-model="baTable.form.items!.weight"
-                        prop="weight"
-                        :input-attr="{ min: 0, precision: 0, step: 1 }"
-                        :placeholder="t('Please input field', { field: t('payment.channels.weight') })"
-                    />
-                    <FormItem
                         :label="t('payment.channels.remark')"
                         type="textarea"
                         v-model="baTable.form.items!.remark"
@@ -308,20 +300,6 @@ const rules: Partial<Record<string, FormItemRule[]>> = reactive({
     ],
     code: [
         { required: true, message: `请输入${t('payment.channels.code')}`, trigger: 'blur' }
-    ],
-    weight: [
-        { required: true, message: `请输入${t('payment.channels.weight')}`, trigger: 'blur' },
-        {
-            validator: (_rule: any, value: any, callback: any) => {
-                const weight = Number(value)
-                if (!Number.isInteger(weight) || weight < 0) {
-                    callback(new Error('Invalid weight'))
-                    return
-                }
-                callback()
-            },
-            trigger: 'blur',
-        },
     ],
     config: [
         {

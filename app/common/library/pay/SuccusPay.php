@@ -13,16 +13,14 @@ class SuccusPay extends Driver
     protected string $mchNo;
     protected string $key;
     protected string $api;
-    protected string $channelCode;
 
-    public function __construct(?string $channelCode = null)
+    public function __construct()
     {
-        $this->channelCode = $channelCode ?: 'Succus';
         $this->getConfig();
     }
     public function getConfig(): bool
     {
-        $config = Channels::where(['code' => $this->channelCode, 'status' => 1])->value('config');
+        $config = Channels::where(['code'=>"Succus", 'status'=>1])->value('config');
         if(empty($config)){
             throw new \Exception('支付渠道未开启');
 

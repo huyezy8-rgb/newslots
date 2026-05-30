@@ -12,7 +12,6 @@ class Channels extends Validate
      * 验证规则
      */
     protected $rule = [
-        'weight' => 'integer|egt:0',
     ];
 
     /**
@@ -25,8 +24,8 @@ class Channels extends Validate
      * 验证场景
      */
     protected $scene = [
-        'add'  => ['weight'],
-        'edit' => ['weight'],
+        'add'  => [],
+        'edit' => [],
     ];
 
 }

@@ -7,10 +7,6 @@ use think\Request;
 
 class TestPay extends Driver
 {
-    public function __construct(?string $channelCode = null)
-    {
-    }
-
     public function createOrder(string $orderNo, float $amount, array $extra = []): array
     {
         return [

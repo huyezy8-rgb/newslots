@@ -20,11 +20,9 @@ class FiatPay extends Driver
     protected string $email;
     protected string $password;
     protected ?string $bearerToken = null;
-    protected string $channelCode;
 
-    public function __construct(?string $channelCode = null)
+    public function __construct()
     {
-        $this->channelCode = $channelCode ?: 'Fiat';
         $this->getConfig();
     }
 
@@ -33,7 +31,7 @@ class FiatPay extends Driver
      */
     public function getConfig(): bool
     {
-        $config = Channels::where(['code' => $this->channelCode, 'status' => 1])->value('config');
+        $config = Channels::where(['code' => "Fiat", 'status' => 1])->value('config');
         if (empty($config)) {
             throw new \Exception('FiatPay支付渠道未开启');
         }
@@ -401,4 +399,4 @@ class FiatPay extends Driver
         
         throw new \Exception($errorMessage);
     }
-}
+} 

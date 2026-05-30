@@ -7,7 +7,6 @@ export default {
     fee: '手续费',
     wallet_type: '钱包类型',
     account_info: '提现账户信息',
-    payment_channel_code: '实际支付渠道',
     status: '状态',
     audit_remark: '审核备注',
     create_time: '申请时间',

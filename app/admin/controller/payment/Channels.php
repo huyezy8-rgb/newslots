@@ -41,7 +41,6 @@ class Channels extends Backend
             if (isset($data['config'])) {
                 $data['config'] = $this->processJsonField($data['config'], 'config');
             }
-            $data['weight'] = $this->normalizeWeight($data['weight'] ?? 100);
 
             $data = $this->excludeFields($data);
 
@@ -98,9 +97,6 @@ class Channels extends Backend
             // 处理 config 字段
             if (isset($data['config'])) {
                 $data['config'] = $this->processJsonField($data['config'], 'config');
-            }
-            if (array_key_exists('weight', $data)) {
-                $data['weight'] = $this->normalizeWeight($data['weight']);
             }
 
             $data   = $this->excludeFields($data);
@@ -160,17 +156,6 @@ class Channels extends Backend
 
         // 保存为JSON字符串，防止数据格式异常
         return json_encode($decoded, JSON_UNESCAPED_UNICODE);
-    }
-
-    private function normalizeWeight($weight): int
-    {
-        if ($weight === '' || $weight === null) {
-            return 100;
-        }
-        if (!is_numeric($weight) || (int)$weight < 0) {
-            $this->error('Invalid weight');
-        }
-        return (int)$weight;
     }
 
     /**
