@@ -35,14 +35,19 @@ class PaymentRouteSelector
         return $this->formatRoute($routes[array_key_last($routes)]);
     }
 
-    public function getAvailableMethods(string $scene, int $userId = 0): array
+    public function getAvailableMethods(string $scene, int $userId = 0, array $configuredPayChannels = []): array
     {
         $routes = $this->queryRoutes('', $scene, null);
         $userStats = $scene === 'recharge' ? $this->getUserRechargeStats($userId) : ['total_amount' => 0, 'total_times' => 0];
+        $rewardMap = $this->buildRewardMap($configuredPayChannels);
+        $hasConfiguredChannels = !empty($rewardMap);
         $methods = [];
 
         foreach ($routes as $route) {
             $payType = strtolower((string)$route['unique_tag']);
+            if ($hasConfiguredChannels && !array_key_exists($payType, $rewardMap)) {
+                continue;
+            }
             if (!$this->shouldDisplayRoute($route, $userStats)) {
                 continue;
             }
@@ -50,7 +55,7 @@ class PaymentRouteSelector
                 continue;
             }
 
-            $methods[$payType] = $this->buildClientMethodData($route);
+            $methods[$payType] = $this->buildClientMethodData($route, $rewardMap[$payType]['reward_percent'] ?? 0);
         }
 
         return array_values($methods);
@@ -135,11 +140,11 @@ class PaymentRouteSelector
         ];
     }
 
-    private function buildClientMethodData(array $route): array
+    private function buildClientMethodData(array $route, float $rewardPercent): array
     {
         return [
             'channel' => $route['unique_tag'],
-            'reward_percent' => 0,
+            'reward_percent' => $rewardPercent,
             'icon' => $route['icon'] ?? '',
             'name' => $route['name'] ?? '',
             'show' => $route['show'] ?? 'all',
@@ -176,6 +181,20 @@ class PaymentRouteSelector
                 ->where(['user_id' => $userId, 'pay_status' => 1])
                 ->count() ?: 0,
         ];
+    }
+
+    private function buildRewardMap(array $configuredPayChannels): array
+    {
+        $map = [];
+        foreach ($configuredPayChannels as $item) {
+            if (empty($item['channel'])) {
+                continue;
+            }
+            $map[strtolower((string)$item['channel'])] = [
+                'reward_percent' => (float)($item['reward_percent'] ?? 0),
+            ];
+        }
+        return $map;
     }
 
     private function formatLimitValue($amount): ?float

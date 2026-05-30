@@ -117,9 +117,9 @@ class PayGatewayService
      * @param array $payChannels
      * @return array
      */
-    public function getAvailablePayChannels($userId, $payChannels = [])
+    public function getAvailablePayChannels($userId, $payChannels)
     {
-        return (new PaymentRouteSelector())->getAvailableMethods('recharge', (int)$userId);
+        return (new PaymentRouteSelector())->getAvailableMethods('recharge', (int)$userId, $payChannels ?: []);
         // 参数验证
         if (empty($userId)) {
             return [];
