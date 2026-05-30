@@ -186,12 +186,11 @@ $account->save($balance_update);
 
 if ($user_info['switch_wallet'] == 1) {
 
-    $releaseAmount = 0;
+   $releaseAmount = 0;
 
-    if (in_array($params['Reason'], ['bet', 'win'], true)) {
-        $releaseAmount = abs((float)$params['Amount']);
-    }
-
+if ($params['Reason'] === 'bet') {
+    $releaseAmount = abs((float)$params['Amount']);
+}
     if ($releaseAmount > 0) {
         // 根据打码量计算：下注和派奖都释放可提现额度
         Log::info('Cash@transferInOut 打码计算: ', [
