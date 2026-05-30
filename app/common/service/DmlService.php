@@ -44,9 +44,12 @@ class DmlService
         // 根据 log_type_id 查询打码倍数
         switch ($logTypeId) {
             // 充值本金 - 使用默认打码倍率
-            case CoinLog::Recharge: 
-                $multiple = (float)get_sys_config('bet_multiplier') ?? 1; 
-                break;
+            case CoinLog::Recharge:
+    $multiple = get_sys_config('bet_multiplier');
+    $multiple = ($multiple !== null && $multiple !== '')
+        ? (float)$multiple
+        : 1;
+    break;
             
             // 充值到账后的赠送活动 - 使用渠道配置倍率
             case CoinLog::FirstDeposit25: $multiple = $this->getBetMultiplierFromChannel($userId, 'first_deposit_25') ?: FirstDeposit25::where(['id'=>1])->value('bet_multiplier'); break;
@@ -65,9 +68,16 @@ class DmlService
             
             case CoinLog::SevenDayCard: $multiple = $this->getBetMultiplierFromChannel($userId, 'seven_day_card') ?: Db::name('seven_day_card_config')->where(['id'=>1])->value('bet_multiple'); break;
 
-            default:  $multiple = (float)get_sys_config('bet_multiplier') ?? 1; break; // 默认1倍
+            default:
+    $multiple = get_sys_config('bet_multiplier');
+    $multiple = ($multiple !== null && $multiple !== '')
+        ? (float)$multiple
+        : 1;
+    break; // 默认1倍
         }
-        $multiple = $multiple??1;
+        $multiple = ($multiple !== null && $multiple !== '' && is_numeric($multiple) && $multiple > 0)
+    ? (float)$multiple
+    : 1;
         $this->addDmlLogWithLogTypeId($userId, $amount, $coinLogId, $multiple, $logTypeId,$newBalance);
     }
 
@@ -119,7 +129,7 @@ class DmlService
     /**
      * 插入打码记录，支持 log_type_id
      */
-    public function addDmlLogWithLogTypeId($userId, float $amount, int $coinLogId, int $multiple, int $logTypeId,$newBalance)
+    public function addDmlLogWithLogTypeId($userId, float $amount, int $coinLogId, float $multiple, int $logTypeId,$newBalance)
     {
         Db::name('account_dml_log')->insert([
             'user_id'      => $userId,

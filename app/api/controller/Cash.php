@@ -181,43 +181,53 @@ if (is_numeric($params['ReqTime']) && strlen((string)$params['ReqTime']) >= 13) 
             }
 
             // 更新余额
-            $account = \app\common\model\Account::find($userId);
-            $account->save($balance_update);
+$account = \app\common\model\Account::find($userId);
+$account->save($balance_update);
 
-            if ($user_info['switch_wallet'] == 1) {
+if ($user_info['switch_wallet'] == 1) {
 
-                if($log_type_id != 6) {
-                    // 根据打码量计算
-                    Log::info('Cash@transferInOut 打码计算: ');
-                    (new DmlService())->updateDml($userId, abs(floatval($params['Amount'])), $newBalance);
-                }
+    $releaseAmount = 0;
 
+    if (in_array($params['Reason'], ['bet', 'win'], true)) {
+        $releaseAmount = abs((float)$params['Amount']);
+    }
 
-                if ($params['Reason'] == "bet") {
-                    // 更新累计下注
-                    $account->setInc('sum_bet', abs(floatval($params['Amount'])));
-                    // 更新虚拟提现
-                    $account->setInc('ex_withdraw_bet', abs(floatval($params['Amount'])));
-                    Log::info('Cash@transferInOut 更新活动数据: ');
-                    event('FirstDeposit270', ['amount' => abs(floatval($params['Amount'])), 'user_id' => $userId]);
-                    event('DepositVip', ['amount' => abs(floatval($params['Amount'])), 'user_id' => $userId]);
-                    event('GameVip', ['amount' => abs(floatval($params['Amount'])), 'game_id' => $params['GameID'], 'user_id' => $userId]);
+    if ($releaseAmount > 0) {
+        // 根据打码量计算：下注和派奖都释放可提现额度
+        Log::info('Cash@transferInOut 打码计算: ', [
+            'user_id' => $userId,
+            'reason' => $params['Reason'],
+            'release_amount' => $releaseAmount,
+            'new_balance' => $newBalance,
+        ]);
 
-                    // 增加用户每日下注
-                    $account->setInc('today_sum_bet', abs(floatval($params['Amount'])));
-                    //下注返佣
-                    $svc = new CommissionService();
-                    $ok = $svc->dispatchSettleJob(intval($userId), abs(floatval($params['Amount'])), floatval(get_sys_config('bet_commission_base_bl') ?? 0.5));
-                    if ($ok) {
-                        Log::info('Cash@transferInOut 下注返佣添加到队列成功: ');
-                    } else {
-                        Log::warning('Cash@transferInOut 下注返佣添加到队列失败');
-                    }
-                    // 触发排行榜统计事件
-                    event('LeaderboardStats', ['amount' => abs(floatval($params['Amount'])), 'user_id' => $userId]);
-                }
-            }
+        (new DmlService())->updateDml($userId, $releaseAmount, (float)$newBalance);
+    }
 
+    if ($params['Reason'] == "bet") {
+        // 更新累计下注
+        $account->setInc('sum_bet', abs(floatval($params['Amount'])));
+        // 更新虚拟提现
+        $account->setInc('ex_withdraw_bet', abs(floatval($params['Amount'])));
+        Log::info('Cash@transferInOut 更新活动数据: ');
+        event('FirstDeposit270', ['amount' => abs(floatval($params['Amount'])), 'user_id' => $userId]);
+        event('DepositVip', ['amount' => abs(floatval($params['Amount'])), 'user_id' => $userId]);
+        event('GameVip', ['amount' => abs(floatval($params['Amount'])), 'game_id' => $params['GameID'], 'user_id' => $userId]);
+
+        // 增加用户每日下注
+        $account->setInc('today_sum_bet', abs(floatval($params['Amount'])));
+        //下注返佣
+        $svc = new CommissionService();
+        $ok = $svc->dispatchSettleJob(intval($userId), abs(floatval($params['Amount'])), floatval(get_sys_config('bet_commission_base_bl') ?? 0.5));
+        if ($ok) {
+            Log::info('Cash@transferInOut 下注返佣添加到队列成功: ');
+        } else {
+            Log::warning('Cash@transferInOut 下注返佣添加到队列失败');
+        }
+        // 触发排行榜统计事件
+        event('LeaderboardStats', ['amount' => abs(floatval($params['Amount'])), 'user_id' => $userId]);
+    }
+}
             // 插入交易记录，增加 wallet_type 字段
             Db::name('game_transactions')->insert([
                 'transaction_id' => $transactionId,

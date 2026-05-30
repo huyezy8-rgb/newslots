@@ -128,9 +128,9 @@ class Withdraw extends Base
         if($user['vip']==0){
             $this->error(__('Vip level is 0, please upgrade to VIP to withdraw'));
         }
-        if($user['vip']==1){
-            $this->error(__('Vip level is 1, please upgrade to VIP2 to withdraw'));
-        }
+        // if($user['vip']==1){
+        //     $this->error(__('Vip level is 1, please upgrade to VIP2 to withdraw'));
+        // }
 
 
         // 处理账号信息（充值钱包提现需要）
@@ -190,8 +190,8 @@ class Withdraw extends Base
         $amount = floatval($params['amount']);
         $typeid = $params['typeid'] ?? 3;
         $walletField = CoinLog::walletType($typeid);
-        $withdraw_available = floatval($user['recharge_wallet'] ?? 0);
-        $recharge_wallet = floatval($user['recharge_wallet'] ?? 0);
+        $withdraw_available = floatval($user['withdraw_available'] ?? 0);
+$recharge_wallet = floatval($user['recharge_wallet'] ?? 0);
 
         if ($amount>$recharge_wallet){
             $this->error(__('Insufficient balance'));

@@ -78,9 +78,15 @@ class AccountService
                 'create_time' => time(),
                 'update_time' => time(),
             ]);
-            if ($isIncrease&& $walletType ==1  && $coinLog && $coinLog->id) {
-                // (new DmlService())->addDmlLogByLogTypeId($userId, $amount, $coinLog->id, $logTypeId,$newBalance);
-            }
+           if ($isIncrease && $walletType == 1 && $coinLog && $coinLog->id) {
+    (new DmlService())->addDmlLogByLogTypeId(
+        $userId,
+        abs((float)$amount),
+        (int)$coinLog->id,
+        $logTypeId,
+        (float)$newBalance
+    );
+}
             return true;
         });
     }

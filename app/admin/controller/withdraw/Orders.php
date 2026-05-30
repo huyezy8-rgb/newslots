@@ -216,7 +216,7 @@ class Orders extends Backend
     public function pass()
     {
         $id = $this->request->post('id');
-        $pass_type = $this->request->post('pass_type','SaxPay');
+        $pass_type = $this->request->post('pass_type','SuccusPay');
         if (!$id) {
             $this->error('参数错误');
         }
@@ -331,6 +331,20 @@ class Orders extends Backend
                 }
                 $platform_order_no = $res['data']['transferOrderNo'] ?? $orderno;
                 $response = json_encode($res, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            } elseif ($pass_type == 'SuccusPay') {
+    $res = $this->getPayService()->createTransfer([
+        'order_no' => $orderno,
+        'amount' => $order->real_amount,
+        'pay_type' => $payType,
+        'extra' => $extraParams,
+    ]);
+
+    if (($res['code'] ?? 1) != 0) {
+        throw new \Exception($res['message'] ?? 'SuccusPay代付创建失败');
+    }
+
+    $platform_order_no = $res['data']['transferOrderNo'] ?? $orderno;
+    $response = json_encode($res, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             } elseif ($pass_type == 'SaxPay') {
                 $payway = "https://saxpay.payc2-sapi.com/apis/pay/order/bk_daifu";
                 $payarr = array(
@@ -352,7 +366,7 @@ class Orders extends Backend
                 }
                 $temp .= "key=7c775a2fabbd457a9bfc5c3addee486f";
                 $payarr['sign'] = md5($temp);
-                file_put_contents("/www/wwwroot/admincs.tapmc.net/.idea/saxpay__.txt", json_encode($payway));
+                // file_put_contents("/www/wwwroot/admincs.tapmc.net/.idea/saxpay__.txt", json_encode($payway));
                 $ch = curl_init();
                 // 设置cURL选项
                 curl_setopt($ch, CURLOPT_URL, $payway); // 目标URL
@@ -365,7 +379,7 @@ class Orders extends Backend
                 // 执行cURL会话
                 $response = curl_exec($ch);
                 $resdata = json_decode($response, true);
-                file_put_contents("/www/wwwroot/admincs.tapmc.net/.idea/saxpay.txt", json_encode($resdata));
+                // file_put_contents("/www/wwwroot/admincs.tapmc.net/.idea/saxpay.txt", json_encode($resdata));
 
                 // $res = $this->getPayService()->createTransfer([
                 //     'order_no' => $orderno,
@@ -415,7 +429,7 @@ class Orders extends Backend
                 $response = curl_exec($ch);
 
                 $resdata = json_decode($response, true);
-                file_put_contents("/www/wwwroot/admincs.tapmc.net/.idea/ouspay.txt", json_encode($resdata));
+                // file_put_contents("/www/wwwroot/admincs.tapmc.net/.idea/ouspay.txt", json_encode($resdata));
 
                 if ($resdata['status'] != 'success') {
                     throw new \Exception($resdata['msg']);
