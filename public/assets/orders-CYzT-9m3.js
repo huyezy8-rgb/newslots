@@ -1,1 +1,0 @@
-const a={id:"id",order_no:"order_no",user_id:"user_id",channel_id:"channel_id",amount:"amount",pay_type:"pay_type",pay_status:"pay_status",remark:"remark",paid_at:"paid_at",created_at:"created_at",updated_at:"updated_at","quick Search Fields":"id"};export{a as default};

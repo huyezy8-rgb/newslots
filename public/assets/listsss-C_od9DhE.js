@@ -1,1 +1,0 @@
-const e={id:"id",name:"name",domain:"domain",theme:"theme",experience_gold_limit:"experience_gold_limit",create_time:"create_time","quick Search Fields":"id",lang:"Language",currency_code:"Currency Code",currency_symbol:"Currency Symbol",time_zone:"Time Zone",double_wallet_enabled:"Double Wallet Enabled"};export{e as default};
