@@ -11,9 +11,9 @@ class PaymentRouteSelector
         'withdraw' => '2',
     ];
 
-    public function selectRoute(string $payType, string $scene, float $amount, int $userId = 0, array $options = []): array
+    public function selectRoute(string $payType, string $scene, float $amount, int $userId = 0): array
     {
-        $routes = $this->getCandidateRoutes($payType, $scene, $amount, $userId, $options);
+        $routes = $this->getCandidateRoutes($payType, $scene, $amount, $userId);
         if (!$routes) {
             throw new \Exception(__('Payment method param error'));
         }
@@ -35,46 +35,36 @@ class PaymentRouteSelector
         return $this->formatRoute($routes[array_key_last($routes)]);
     }
 
-    public function getAvailableMethods(string $scene, int $userId = 0, array $options = []): array
+    public function getAvailableMethods(string $scene, int $userId = 0): array
     {
-        $amount = array_key_exists('amount', $options) && $options['amount'] !== null ? (float)$options['amount'] : null;
-        $routes = $this->queryRoutes('', $scene, $amount);
-        $routes = $this->filterRoutesByChannelCodes($routes, $options['allowed_channel_codes'] ?? []);
-        $routes = $this->filterRoutesByPayTypes($routes, $options['allowed_pay_types'] ?? []);
+        $routes = $this->queryRoutes('', $scene, null);
         $userStats = $scene === 'recharge' ? $this->getUserRechargeStats($userId) : ['total_amount' => 0, 'total_times' => 0];
-        $appendPayTypes = $scene === 'recharge'
-            ? ($options['append_pay_types'] ?? (new PaymentSmartControlService())->getRechargeAppendPayTypes($userId))
-            : [];
-        $smartControlHit = !empty($options['smart_control_hit']);
         $methods = [];
 
         foreach ($routes as $route) {
             $payType = strtolower((string)$route['unique_tag']);
-            if (!$this->shouldDisplayRoute($route, $userStats, $appendPayTypes)) {
+            if (!$this->shouldDisplayRoute($route, $userStats)) {
                 continue;
             }
             if (isset($methods[$payType])) {
                 continue;
             }
 
-            $methods[$payType] = $this->buildClientMethodData($route, $smartControlHit, $scene);
+            $methods[$payType] = $this->buildClientMethodData($route);
         }
 
         return array_values($methods);
     }
 
-    public function getCandidateRoutes(string $payType, string $scene, ?float $amount = null, int $userId = 0, array $options = []): array
+    public function getCandidateRoutes(string $payType, string $scene, ?float $amount = null, int $userId = 0): array
     {
         $routes = $this->queryRoutes($payType, $scene, $amount);
-        $routes = $this->filterRoutesByChannelCodes($routes, $options['allowed_channel_codes'] ?? []);
-        $routes = $this->filterRoutesByPayTypes($routes, $options['allowed_pay_types'] ?? []);
         if ($scene !== 'recharge') {
             return $routes;
         }
 
         $userStats = $this->getUserRechargeStats($userId);
-        $appendPayTypes = $options['append_pay_types'] ?? (new PaymentSmartControlService())->getRechargeAppendPayTypes($userId);
-        return array_values(array_filter($routes, fn(array $route): bool => $this->shouldDisplayRoute($route, $userStats, $appendPayTypes)));
+        return array_values(array_filter($routes, fn(array $route): bool => $this->shouldDisplayRoute($route, $userStats)));
     }
 
     private function queryRoutes(string $payType, string $scene, ?float $amount): array
@@ -145,9 +135,9 @@ class PaymentRouteSelector
         ];
     }
 
-    private function buildClientMethodData(array $route, bool $smartControlHit = false, string $scene = 'recharge'): array
+    private function buildClientMethodData(array $route): array
     {
-        $data = [
+        return [
             'channel' => $route['unique_tag'],
             'reward_percent' => 0,
             'icon' => $route['icon'] ?? '',
@@ -161,22 +151,15 @@ class PaymentRouteSelector
             'bank_count' => 0,
             'has_banks' => false,
         ];
-
-        if ($scene === 'withdraw') {
-            $data['smart_control_hit'] = $smartControlHit;
-        }
-
-        return $data;
     }
 
-    private function shouldDisplayRoute(array $route, array $userStats, array $appendPayTypes = []): bool
+    private function shouldDisplayRoute(array $route, array $userStats): bool
     {
         if (empty($route['is_clause']) || (int)$route['is_clause'] !== 1) {
             return true;
         }
 
-        $payType = strtolower((string)($route['unique_tag'] ?? ''));
-        return in_array($payType, $this->normalizeStringList($appendPayTypes), true);
+        return (float)$userStats['total_amount'] >= 30 && (int)$userStats['total_times'] >= 3;
     }
 
     private function getUserRechargeStats(int $userId): array
@@ -202,36 +185,5 @@ class PaymentRouteSelector
         }
 
         return (float)$amount;
-    }
-
-    private function filterRoutesByChannelCodes(array $routes, array $channelCodes): array
-    {
-        $channelCodes = $this->normalizeStringList($channelCodes);
-        if (!$channelCodes) {
-            return $routes;
-        }
-
-        return array_values(array_filter($routes, static function (array $route) use ($channelCodes): bool {
-            return in_array(strtolower((string)($route['channel_code'] ?? '')), $channelCodes, true);
-        }));
-    }
-
-    private function filterRoutesByPayTypes(array $routes, array $payTypes): array
-    {
-        $payTypes = $this->normalizeStringList($payTypes);
-        if (!$payTypes) {
-            return $routes;
-        }
-
-        return array_values(array_filter($routes, static function (array $route) use ($payTypes): bool {
-            return in_array(strtolower((string)($route['unique_tag'] ?? '')), $payTypes, true);
-        }));
-    }
-
-    private function normalizeStringList(array $items): array
-    {
-        return array_values(array_unique(array_filter(array_map(static function ($item): string {
-            return strtolower(trim((string)$item));
-        }, $items), static fn(string $item): bool => $item !== '')));
     }
 }

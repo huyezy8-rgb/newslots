@@ -189,7 +189,7 @@ class Recharge extends Base
             $this->error(__('Please select payment method'));
         }
         try {
-            $this->getPayService()->validatePaymentAmount($payType, $price, 'recharge', (int)$this->userInfo['id']);
+            $this->getPayService()->validatePaymentAmount($payType, $price, 'recharge');
         } catch (\Throwable $e) {
             $this->error($e->getMessage());
         }

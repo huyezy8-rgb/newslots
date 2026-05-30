@@ -9,7 +9,6 @@ use app\common\model\withdraw\Orders;
 use app\common\service\ChannelInfoService;
 use app\common\service\PayGatewayService;
 use app\common\service\PaymentRouteSelector;
-use app\common\service\PaymentSmartControlService;
 use app\common\service\AccountService;
 use think\facade\Db;
 
@@ -22,7 +21,6 @@ class Withdraw extends Base
     {
         $params = $this->request->param();
         $typeid = intval($params['typeid'] ?? 3);
-        $amount = isset($params['amount']) && $params['amount'] !== '' ? (float)$params['amount'] : null;
 
         $data = [];
         $todayStart = strtotime(date('Y-m-d 00:00:00')); // 今日开始时间
@@ -58,7 +56,7 @@ class Withdraw extends Base
         // 添加提现方式列表
         try {
             $payGatewayService = new PayGatewayService();
-            $withdrawChannels = $payGatewayService->getAvailableWithdrawChannels($amount);
+            $withdrawChannels = $payGatewayService->getAvailableWithdrawChannels();
             $data['withdraw_channels'] = $withdrawChannels;
         } catch (\Exception $e) {
             // 如果获取提现方式失败，记录错误但不影响主要功能
@@ -146,11 +144,8 @@ class Withdraw extends Base
         if (false && !$paymentMethod) {
             $this->error(__('Invalid withdraw method'));
         }
-        $restrictedPayTypes = (new PaymentSmartControlService())->getWithdrawRestrictedPayTypes($amount);
         try {
-            $paymentRoute = (new PaymentRouteSelector())->selectRoute($pay_type, 'withdraw', $amount, (int)$this->userInfo['id'], [
-                'allowed_pay_types' => $restrictedPayTypes,
-            ]);
+            $paymentRoute = (new PaymentRouteSelector())->selectRoute($pay_type, 'withdraw', $amount, (int)$this->userInfo['id']);
         } catch (\Throwable $e) {
             $this->error($e->getMessage());
         }
