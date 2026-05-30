@@ -149,8 +149,9 @@ class Dashboard extends Backend
             $registeredUsers = $this->getRegisteredUsers($startOfDay, $endOfDay, $channelId, $userIds);
             
             // 从预计算数据获取核心指标
-            $paidUsers = $this->getPaidUsers($startOfDay, $endOfDay, $channelId, $userIds);
-$totalRechargeAmount = $this->getTotalRechargeAmount($startOfDay, $endOfDay, $channelId, $userIds);
+            $rechargeStats = $this->getRechargeStats($startOfDay, $endOfDay, $channelId, $userIds);
+            $paidUsers = $rechargeStats['paid_users'];
+            $totalRechargeAmount = $rechargeStats['paid_amount'];
             $withdrawalAmount = $operationData['all_withdraw_amount'] ?? 0; // 提现金额
             
             $data = [
@@ -540,22 +541,19 @@ $totalRechargeAmount = $this->getTotalRechargeAmount($startOfDay, $endOfDay, $ch
 
 
 /**
+ * 获取充值统计
+ */
+private function getRechargeStats(int $startOfDay, int $endOfDay, ?int $channelId, array $userIds): array
+{
+    return OperationDataService::getPaidRechargeStats($startOfDay, $endOfDay, $channelId ? $userIds : null);
+}
+
+/**
  * 获取付费用户数
  */
 private function getPaidUsers(int $startOfDay, int $endOfDay, ?int $channelId, array $userIds): int
 {
-    $query = Db::name('recharge_orders')
-        ->where('pay_status', 1)
-        ->whereBetweenTime('created_at', $startOfDay, $endOfDay);
-
-    if ($channelId) {
-        if (empty($userIds)) {
-            return 0;
-        }
-        $query->whereIn('user_id', $userIds);
-    }
-
-    return $query->count('DISTINCT user_id');
+    return $this->getRechargeStats($startOfDay, $endOfDay, $channelId, $userIds)['paid_users'];
 }
 
 /**
@@ -563,18 +561,7 @@ private function getPaidUsers(int $startOfDay, int $endOfDay, ?int $channelId, a
  */
 private function getTotalRechargeAmount(int $startOfDay, int $endOfDay, ?int $channelId, array $userIds): float
 {
-    $query = Db::name('recharge_orders')
-        ->where('pay_status', 1)
-        ->whereBetweenTime('created_at', $startOfDay, $endOfDay);
-
-    if ($channelId) {
-        if (empty($userIds)) {
-            return 0;
-        }
-        $query->whereIn('user_id', $userIds);
-    }
-
-    return (float)$query->sum('amount');
+    return $this->getRechargeStats($startOfDay, $endOfDay, $channelId, $userIds)['paid_amount'];
 }
 
     /**

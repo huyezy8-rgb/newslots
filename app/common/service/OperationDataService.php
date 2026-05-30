@@ -10,6 +10,31 @@ use app\common\model\OperationData;
  */
 class OperationDataService
 {
+    public static function getPaidRechargeStats(int $startTime, int $endTime, ?array $userIds = null): array
+    {
+        if ($userIds !== null && empty($userIds)) {
+            return ['paid_users' => 0, 'paid_amount' => 0.0];
+        }
+
+        $query = Db::name('recharge_orders')
+            ->where('pay_status', 1)
+            ->where('created_at', '>=', $startTime)
+            ->where('created_at', '<=', $endTime);
+
+        if ($userIds !== null) {
+            $query->whereIn('user_id', $userIds);
+        }
+
+        $stats = $query
+            ->fieldRaw('COUNT(DISTINCT user_id) AS paid_users, COALESCE(SUM(amount), 0) AS paid_amount')
+            ->find();
+
+        return [
+            'paid_users' => (int)($stats['paid_users'] ?? 0),
+            'paid_amount' => (float)($stats['paid_amount'] ?? 0),
+        ];
+    }
+
     /**
      * 获取指定日期的统计数据（与脚本逻辑保持一致）
      * @param string $date 日期 Y-m-d 格式
@@ -77,15 +102,9 @@ class OperationDataService
         $dau = $newRegisterCount + $previousActiveCount;
 
         // ==================== 2. 付费数据统计 ====================
-        $rechargeQuery = Db::name('recharge_orders')
-            ->where('pay_status', 1)
-            ->where('created_at', '>=', $startTime)
-            ->where('created_at', '<=', $endTime);
-        if ($channelId && !empty($userIds)) {
-            $rechargeQuery = $rechargeQuery->whereIn('user_id', $userIds);
-        }
-        $paidUsers = $rechargeQuery->count('DISTINCT user_id');
-        $paidAmount = $rechargeQuery->sum('amount');
+        $rechargeStats = self::getPaidRechargeStats($startTime, $endTime, $channelId ? $userIds : null);
+        $paidUsers = $rechargeStats['paid_users'];
+        $paidAmount = $rechargeStats['paid_amount'];
 
         // ==================== 3. 提现数据统计 ====================
         $withdrawQuery = Db::name('withdraw_orders')
@@ -247,13 +266,9 @@ class OperationDataService
             ];
         }
         // 2. 新用户付费数据
-        $newUserRechargeQuery = Db::name('recharge_orders')
-            ->where('pay_status', 1)
-            ->where('created_at', '>=', $startTime)
-            ->where('created_at', '<=', $endTime)
-            ->whereIn('user_id', $newUserIds);
-        $newUserPaidCount = $newUserRechargeQuery->count('DISTINCT user_id');
-        $newUserPaidAmount = $newUserRechargeQuery->sum('amount');
+        $newUserRechargeStats = self::getPaidRechargeStats($startTime, $endTime, $newUserIds);
+        $newUserPaidCount = $newUserRechargeStats['paid_users'];
+        $newUserPaidAmount = $newUserRechargeStats['paid_amount'];
         // 3. 新用户提现数据
         $newUserWithdrawData = Db::name('withdraw_orders')
             ->where('status', 2)
@@ -392,13 +407,9 @@ class OperationDataService
             ];
         }
         // 3. 老用户付费数据
-        $oldUserRechargeQuery = Db::name('recharge_orders')
-            ->where('pay_status', 1)
-            ->where('created_at', '>=', $startTime)
-            ->where('created_at', '<=', $endTime)
-            ->whereIn('user_id', $oldActiveUsers);
-        $oldUserPaidCount = $oldUserRechargeQuery->count('DISTINCT user_id');
-        $oldUserPaidAmount = $oldUserRechargeQuery->sum('amount');
+        $oldUserRechargeStats = self::getPaidRechargeStats($startTime, $endTime, $oldActiveUsers);
+        $oldUserPaidCount = $oldUserRechargeStats['paid_users'];
+        $oldUserPaidAmount = $oldUserRechargeStats['paid_amount'];
         // 4. 老用户提现数据
         $oldUserWithdrawData = Db::name('withdraw_orders')
             ->where('status', 2)
