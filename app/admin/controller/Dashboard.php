@@ -555,7 +555,7 @@ private function getPaidUsers(int $startOfDay, int $endOfDay, ?int $channelId, a
         $query->whereIn('user_id', $userIds);
     }
 
-    return $query->distinct(true)->count('user_id');
+    return $query->count('DISTINCT user_id');
 }
 
 /**
@@ -1024,9 +1024,7 @@ private function getTotalRechargeAmount(int $startOfDay, int $endOfDay, ?int $ch
             return (int)$order['pay_status'] === 1; // 只统计成功的充值
         }, ARRAY_FILTER_USE_BOTH);
         
-        // 提取user_id列
-        $userIdsColumn = array_column($successRechargeOrders, 'user_id');
-        $paidUsers = count(array_unique($userIdsColumn));
+        $paidUsers = $this->getPaidUsers($startOfDay, $endOfDay, $channelId, $userIds);
         
         // 提取amount列
         $amountsColumn = array_column($successRechargeOrders, 'amount');

@@ -244,10 +244,8 @@ class GenerateOperationData extends Command
         if ($channelId && !empty($userIds)) {
             $rechargeQuery = $rechargeQuery->whereIn('user_id', $userIds);
         }
-        $rechargeOrders = $rechargeQuery->select()->toArray();
-        
-        $paidUsers = count(array_unique(array_column($rechargeOrders, 'user_id')));
-        $paidAmount = array_sum(array_column($rechargeOrders, 'amount'));
+        $paidUsers = $rechargeQuery->count('DISTINCT user_id');
+        $paidAmount = $rechargeQuery->sum('amount');
 
         // ==================== 3. 提现数据统计 ====================
         
@@ -507,16 +505,14 @@ class GenerateOperationData extends Command
         $newDau = count($newUserIds);
 
         // 新用户付费数据
-        $newRechargeOrders = Db::name('recharge_orders')
+        $newRechargeQuery = Db::name('recharge_orders')
             ->where('pay_status', 1)
             ->where('created_at', '>=', $startTime)
             ->where('created_at', '<=', $endTime)
-            ->whereIn('user_id', $newUserIds)
-            ->select()
-            ->toArray();
-        
-        $newPaidUsers = count(array_unique(array_column($newRechargeOrders, 'user_id')));
-        $newPaidAmount = array_sum(array_column($newRechargeOrders, 'amount'));
+            ->whereIn('user_id', $newUserIds);
+
+        $newPaidUsers = $newRechargeQuery->count('DISTINCT user_id');
+        $newPaidAmount = $newRechargeQuery->sum('amount');
 
         // 新用户提现数据
         $newWithdrawOrders = Db::name('withdraw_orders')
@@ -670,16 +666,14 @@ class GenerateOperationData extends Command
         $oldDau = count($oldActiveUsers);
 
         // 老用户付费数据
-        $oldRechargeOrders = Db::name('recharge_orders')
+        $oldRechargeQuery = Db::name('recharge_orders')
             ->where('pay_status', 1)
             ->where('created_at', '>=', $startTime)
             ->where('created_at', '<=', $endTime)
-            ->whereIn('user_id', $oldUserIds)
-            ->select()
-            ->toArray();
-        
-        $oldPaidUsers = count(array_unique(array_column($oldRechargeOrders, 'user_id')));
-        $oldPaidAmount = array_sum(array_column($oldRechargeOrders, 'amount'));
+            ->whereIn('user_id', $oldUserIds);
+
+        $oldPaidUsers = $oldRechargeQuery->count('DISTINCT user_id');
+        $oldPaidAmount = $oldRechargeQuery->sum('amount');
 
         // 老用户提现数据
         $oldWithdrawOrders = Db::name('withdraw_orders')
@@ -765,4 +759,4 @@ class GenerateOperationData extends Command
             'profit' => round($oldProfit, 2), // 老用户运营商盈利：老用户下单金额 - 老用户返奖金额
         ];
     }
-} 
+}

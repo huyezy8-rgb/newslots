@@ -84,9 +84,8 @@ class OperationDataService
         if ($channelId && !empty($userIds)) {
             $rechargeQuery = $rechargeQuery->whereIn('user_id', $userIds);
         }
-        $rechargeOrders = $rechargeQuery->select()->toArray();
-        $paidUsers = count(array_unique(array_column($rechargeOrders, 'user_id')));
-        $paidAmount = array_sum(array_column($rechargeOrders, 'amount'));
+        $paidUsers = $rechargeQuery->count('DISTINCT user_id');
+        $paidAmount = $rechargeQuery->sum('amount');
 
         // ==================== 3. 提现数据统计 ====================
         $withdrawQuery = Db::name('withdraw_orders')
@@ -248,15 +247,13 @@ class OperationDataService
             ];
         }
         // 2. 新用户付费数据
-        $newUserRechargeData = Db::name('recharge_orders')
+        $newUserRechargeQuery = Db::name('recharge_orders')
             ->where('pay_status', 1)
             ->where('created_at', '>=', $startTime)
             ->where('created_at', '<=', $endTime)
-            ->whereIn('user_id', $newUserIds)
-            ->select()->toArray();
-        $newUserPaidUsers = array_unique(array_column($newUserRechargeData, 'user_id'));
-        $newUserPaidAmount = array_sum(array_column($newUserRechargeData, 'amount'));
-        $newUserPaidCount = count($newUserPaidUsers);
+            ->whereIn('user_id', $newUserIds);
+        $newUserPaidCount = $newUserRechargeQuery->count('DISTINCT user_id');
+        $newUserPaidAmount = $newUserRechargeQuery->sum('amount');
         // 3. 新用户提现数据
         $newUserWithdrawData = Db::name('withdraw_orders')
             ->where('status', 2)
@@ -395,15 +392,13 @@ class OperationDataService
             ];
         }
         // 3. 老用户付费数据
-        $oldUserRechargeData = Db::name('recharge_orders')
+        $oldUserRechargeQuery = Db::name('recharge_orders')
             ->where('pay_status', 1)
             ->where('created_at', '>=', $startTime)
             ->where('created_at', '<=', $endTime)
-            ->whereIn('user_id', $oldActiveUsers)
-            ->select()->toArray();
-        $oldUserPaidUsers = array_unique(array_column($oldUserRechargeData, 'user_id'));
-        $oldUserPaidAmount = array_sum(array_column($oldUserRechargeData, 'amount'));
-        $oldUserPaidCount = count($oldUserPaidUsers);
+            ->whereIn('user_id', $oldActiveUsers);
+        $oldUserPaidCount = $oldUserRechargeQuery->count('DISTINCT user_id');
+        $oldUserPaidAmount = $oldUserRechargeQuery->sum('amount');
         // 4. 老用户提现数据
         $oldUserWithdrawData = Db::name('withdraw_orders')
             ->where('status', 2)
@@ -549,4 +544,4 @@ class OperationDataService
         );
         return $channels;
     }
-} 
+}
