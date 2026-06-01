@@ -20,7 +20,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, provide, useTemplateRef } from 'vue'
+import { onMounted, provide, reactive, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 // import PopupForm from './popupForm.vue'
 import { baTableApi } from '/@/api/common'
@@ -29,6 +29,7 @@ import TableHeader from '/@/components/table/header/index.vue'
 import Table from '/@/components/table/index.vue'
 import baTableClass from '/@/utils/baTable'
 import { useAdminInfo } from '/@/stores/adminInfo'
+import createAxios from '/@/utils/axios'
 const adminInfo = useAdminInfo()
 
 defineOptions({
@@ -38,6 +39,7 @@ defineOptions({
 const { t } = useI18n()
 const tableRef = useTemplateRef('tableRef')
 // const optButtons: OptButton[] = defaultOptButtons(['edit', 'delete'])
+const paymentTypeOptions = reactive<Record<string, string>>({})
 
 /**
  * baTable 内包含了表格的所有数据且数据具备响应性，然后通过 provide 注入给了后代组件
@@ -46,6 +48,7 @@ const baTable = new baTableClass(
     new baTableApi('/admin/recharge.Orders/'),
     {
         pk: 'id',
+        showComSearch: true,
         column: [
             { type: 'selection', align: 'center', operator: false },
             { label: t('recharge.orders.id'), prop: 'id', align: 'center', width: 70, operator: 'RANGE', sortable: 'custom' },
@@ -64,8 +67,10 @@ const baTable = new baTableClass(
                 label: t('recharge.orders.pay_type'),
                 prop: 'pay_type',
                 align: 'center',
-                operatorPlaceholder: t('Fuzzy query'),
-                operator: 'LIKE',
+                operatorPlaceholder: t('Please select field', { field: t('recharge.orders.pay_type') }),
+                operator: 'eq',
+                comSearchRender: 'select',
+                replaceValue: paymentTypeOptions,
                 sortable: false,
             },
             {
@@ -107,7 +112,18 @@ const baTable = new baTableClass(
 
 provide('baTable', baTable)
 
+const loadPaymentTypeOptions = () => {
+    createAxios<Record<string, string>>({
+        url: '/admin/payment.Methods/rechargeOptions',
+        method: 'get',
+    }).then((res) => {
+        Object.keys(paymentTypeOptions).forEach((key) => delete paymentTypeOptions[key])
+        Object.assign(paymentTypeOptions, res.data)
+    })
+}
+
 onMounted(() => {
+    loadPaymentTypeOptions()
     baTable.table.ref = tableRef.value
     baTable.mount()
     baTable.getData()?.then(() => {
