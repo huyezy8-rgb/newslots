@@ -18,7 +18,7 @@ class Methods extends Backend
      */
     protected object $model;
 
-    protected array $noNeedPermission = ['channels', 'batchEdit', 'rechargeOptions'];
+    protected array $noNeedPermission = ['channels', 'batchEdit', 'rechargeOptions', 'withdrawOptions'];
 
     protected array|string $preExcludeFields = ['id', 'create_time', 'update_time'];
 
@@ -102,9 +102,19 @@ class Methods extends Backend
 
     public function rechargeOptions(): void
     {
+        $this->success('', $this->buildPaymentMethodOptions(['0', '1']));
+    }
+
+    public function withdrawOptions(): void
+    {
+        $this->success('', $this->buildPaymentMethodOptions(['0', '2']));
+    }
+
+    private function buildPaymentMethodOptions(array $payMethods): array
+    {
         $methods = Db::name('payment_methods')
             ->where('unique_tag', '<>', '')
-            ->where('pay_method', 'in', ['0', '1'])
+            ->where('pay_method', 'in', $payMethods)
             ->field('unique_tag,name')
             ->order('channel_code', 'asc')
             ->order('name', 'asc')
@@ -118,7 +128,7 @@ class Methods extends Backend
             $options[$payType] = $name && $name !== $payType ? $name . ' (' . $payType . ')' : $payType;
         }
 
-        $this->success('', $options);
+        return $options;
     }
 
     public function batchEdit(): void

@@ -38,7 +38,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, provide, useTemplateRef } from 'vue'
+import { onMounted, provide, reactive, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { baTableApi } from '/@/api/common'
 import TableHeader from '/@/components/table/header/index.vue'
@@ -46,12 +46,14 @@ import Table from '/@/components/table/index.vue'
 import baTableClass from '/@/utils/baTable'
 import { ElMessageBox } from 'element-plus'
 import { useAdminInfo } from '/@/stores/adminInfo'
+import createAxios from '/@/utils/axios'
 const adminInfo = useAdminInfo()
 
 defineOptions({ name: 'withdraw/orders' })
 
 const { t } = useI18n()
 const tableRef = useTemplateRef('tableRef')
+const withdrawTypeOptions = reactive<Record<string, string>>({})
 
 // 修改 pass 和 reject 按钮的类型
 const pass: OptButton = {
@@ -185,13 +187,23 @@ const baTable = new baTableClass(
   new baTableApi('/admin/withdraw.Orders/'),
   {
       pk: 'id',
+      showComSearch: true,
       column: [
           { type: 'selection', align: 'left', operator: false },
           { label: t('withdraw.orders.id'), prop: 'id', align: 'center', width: 70, operator: 'RANGE', sortable: 'custom' },
           { label: t('withdraw.orders.channel_id'), prop: 'channel_id', align: 'center', operator: adminInfo.isAdminChannelId == null ? '=' : false, operatorPlaceholder: t('Fuzzy query') },
           { label: t('withdraw.orders.user_id'), prop: 'user_id', align: 'center', operator: 'LIKE', operatorPlaceholder: t('Fuzzy query'), sortable: true },
           { label: "订单编号", prop: 'order_no', align: 'center',width: 100,  operator: 'LIKE'},
-          { label: "提现方式", prop: 'pay_type', align: 'center',width: 100,  operator: 'LIKE'},
+          {
+              label: "提现方式",
+              prop: 'pay_type',
+              align: 'center',
+              width: 100,
+              operator: 'eq',
+              operatorPlaceholder: t('Please select field', { field: '提现方式' }),
+              comSearchRender: 'select',
+              replaceValue: withdrawTypeOptions,
+          },
           {
               label: t('withdraw.orders.amount'),
               prop: 'amount',
@@ -265,7 +277,18 @@ const baTable = new baTableClass(
 
 provide('baTable', baTable)
 
+const loadWithdrawTypeOptions = () => {
+    createAxios<Record<string, string>>({
+        url: '/admin/payment.Methods/withdrawOptions',
+        method: 'get',
+    }).then((res) => {
+        Object.keys(withdrawTypeOptions).forEach((key) => delete withdrawTypeOptions[key])
+        Object.assign(withdrawTypeOptions, res.data)
+    })
+}
+
 onMounted(() => {
+  loadWithdrawTypeOptions()
   baTable.table.ref = tableRef.value
   baTable.mount()
   baTable.getData()?.then(() => {
