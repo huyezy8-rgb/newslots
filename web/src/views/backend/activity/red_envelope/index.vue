@@ -18,9 +18,12 @@
                                 v-model.number="formData[field.name]"
                                 type="number"
                                 :min="field.name === 'maximum_daily_redemption_times' ? 0 : undefined"
-                                :placeholder="`请输入${field.title}`"
+                                :placeholder="field.name === 'maximum_daily_redemption_times' ? '填 0 表示不限制' : `请输入${field.title}`"
                             />
-                            <div v-if="field.name === 'maximum_daily_redemption_times'" class="form-tip">填 0 表示不限制每日兑换次数</div>
+                            <div v-if="field.name === 'maximum_daily_redemption_times'" class="form-tip">
+                                <el-tag v-if="Number(formData[field.name]) === 0" size="small" type="warning">当前为不限制</el-tag>
+                                <span>填 0 表示不限制每日兑换次数；填大于 0 的数字表示每天最多可兑换的次数。</span>
+                            </div>
                             <!-- 其他类型可扩展 -->
                         </el-form-item>
                     </template>

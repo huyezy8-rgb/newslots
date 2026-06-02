@@ -20,7 +20,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, provide, useTemplateRef, h } from 'vue'
+import { onMounted, provide, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import PopupForm from './popupForm.vue'
 import { baTableApi } from '/@/api/common'
@@ -58,7 +58,37 @@ const baTable = new baTableClass(
             { label: t('red.envelope.redemption.code.amount_min'), prop: 'amount_min', align: 'center', operator: 'RANGE', sortable: false },
             { label: t('red.envelope.redemption.code.amount_max'), prop: 'amount_max', align: 'center', operator: 'RANGE', sortable: false },
             {
-                label: '已兑换数量',
+                label: t('red.envelope.redemption.code.per_user_limit'),
+                prop: 'per_user_limit',
+                align: 'center',
+                render: 'tag',
+                operator: 'RANGE',
+                sortable: false,
+                custom: {
+                    0: 'warning',
+                },
+                replaceValue: (value: number) => {
+                    const limit = Number(value ?? 1)
+                    return limit === 0 ? t('red.envelope.redemption.code.unlimited') : `${limit}${t('red.envelope.redemption.code.times_unit')}`
+                },
+            },
+            {
+                label: t('red.envelope.redemption.code.expire_hours'),
+                prop: 'expire_hours',
+                align: 'center',
+                render: 'tag',
+                operator: 'RANGE',
+                sortable: false,
+                custom: {
+                    0: 'success',
+                },
+                replaceValue: (value: number) => {
+                    const hours = Number(value ?? 0)
+                    return hours === 0 ? t('red.envelope.redemption.code.never_expire') : `${hours}${t('red.envelope.redemption.code.hours_unit')}`
+                },
+            },
+            {
+                label: t('red.envelope.redemption.code.used_count'),
                 prop: 'used_count',
                 align: 'center',
                 render: 'tag',
@@ -68,16 +98,18 @@ const baTable = new baTableClass(
                     0: 'info',
                 },
                 replaceValue: (value: number) => {
-                    if (value === 0) return '0次';
-                    return `${value}次`;
-                }
+                    return `${Number(value ?? 0)}`
+                },
             },
             { label: t('Operate'), align: 'center', width: 100, render: 'buttons', buttons: optButtons, operator: false },
         ],
         dblClickNotEditColumn: [undefined],
     },
     {
-        defaultItems: {},
+        defaultItems: {
+            per_user_limit: 1,
+            expire_hours: 0,
+        },
     }
 )
 

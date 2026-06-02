@@ -53,6 +53,24 @@
                         :input-attr="{ step: 1 }"
                         :placeholder="t('Please input field', { field: t('red.envelope.redemption.code.amount_max') })"
                     />
+                    <FormItem
+                        :label="t('red.envelope.redemption.code.per_user_limit')"
+                        type="number"
+                        v-model="baTable.form.items!.per_user_limit"
+                        prop="per_user_limit"
+                        :input-attr="{ min: 0, step: 1 }"
+                        :placeholder="t('Please input field', { field: t('red.envelope.redemption.code.per_user_limit') })"
+                    />
+                    <div class="form-tip" :style="tipStyle">{{ t('red.envelope.redemption.code.per_user_limit_tip') }}</div>
+                    <FormItem
+                        :label="t('red.envelope.redemption.code.expire_hours')"
+                        type="number"
+                        v-model="baTable.form.items!.expire_hours"
+                        prop="expire_hours"
+                        :input-attr="{ min: 0, step: 1 }"
+                        :placeholder="t('Please input field', { field: t('red.envelope.redemption.code.expire_hours') })"
+                    />
+                    <div class="form-tip" :style="tipStyle">{{ t('red.envelope.redemption.code.expire_hours_tip') }}</div>
                 </el-form>
             </div>
         </el-scrollbar>
@@ -81,6 +99,7 @@ const formRef = useTemplateRef('formRef')
 const baTable = inject('baTable') as baTableClass
 
 const { t } = useI18n()
+const tipStyle = config.layout.shrink ? '' : `margin-left: ${baTable.form.labelWidth}px`
 
 // 生成20位随机兑换码（字母和数字）
 const generateRedemptionCode = (): string => {
@@ -99,6 +118,8 @@ watch(() => baTable.form.operate, (newOperate) => {
         setTimeout(() => {
             if (baTable.form.items) {
                 baTable.form.items.code = generateRedemptionCode()
+                baTable.form.items.per_user_limit = 1
+                baTable.form.items.expire_hours = 0
             }
         }, 100)
     }
@@ -107,9 +128,19 @@ watch(() => baTable.form.operate, (newOperate) => {
 const rules: Partial<Record<string, FormItemRule[]>> = reactive({
     amount_min: [buildValidatorData({ name: 'number', title: t('red.envelope.redemption.code.amount_min') })],
     amount_max: [buildValidatorData({ name: 'number', title: t('red.envelope.redemption.code.amount_max') })],
+    per_user_limit: [buildValidatorData({ name: 'number', title: t('red.envelope.redemption.code.per_user_limit') })],
+    expire_hours: [buildValidatorData({ name: 'number', title: t('red.envelope.redemption.code.expire_hours') })],
     is_used: [buildValidatorData({ name: 'number', title: t('red.envelope.redemption.code.is_used') })],
     used_at: [buildValidatorData({ name: 'date', title: t('red.envelope.redemption.code.used_at') })],
 })
 </script>
 
-<style scoped lang="scss"></style>
+<style scoped lang="scss">
+.form-tip {
+    margin-top: -12px;
+    margin-bottom: 16px;
+    color: var(--el-text-color-secondary);
+    font-size: 12px;
+    line-height: 18px;
+}
+</style>
