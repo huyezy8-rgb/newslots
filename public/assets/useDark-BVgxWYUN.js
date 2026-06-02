@@ -1,0 +1,1 @@
+import{aC as a,aw as e,av as o}from"./index-DKMEO9uC.js";const n=e({onChanged(s){const t=o();l(s),t.setLayout("isDark",s),t.onSetLayoutColor()}}),u=a(n);function l(s){const t=document.getElementsByTagName("html")[0];s?t.setAttribute("class","dark"):t.setAttribute("class","")}export{u as t};
