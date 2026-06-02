@@ -1,5 +1,7 @@
 <?php
 
+$mysqlTimezone = trim((string) env('database.timezone', ''));
+
 return [
     // 默认使用的数据库连接配置
     'default'         => env('database.driver', 'mysql'),
@@ -34,7 +36,9 @@ return [
             // 端口
             'hostport'        => env('database.hostport', '3306'),
             // 数据库连接参数
-            'params'          => [],
+            'params'          => $mysqlTimezone ? [
+                \PDO::MYSQL_ATTR_INIT_COMMAND => "SET time_zone = '{$mysqlTimezone}'",
+            ] : [],
             // 数据库编码默认采用utf8mb4
             'charset'         => env('database.charset', 'utf8mb4'),
             // 数据库表前缀
