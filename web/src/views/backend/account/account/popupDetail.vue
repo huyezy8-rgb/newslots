@@ -1,5 +1,5 @@
 <template>
-  <el-dialog v-model="visibleInner" title="用户详情" width="1000px" destroy-on-close>
+  <el-dialog v-model="visibleInner" class="account-detail-dialog" title="用户详情" width="min(1000px, 96vw)" top="4vh" destroy-on-close>
     <div class="layout__body">
       <aside class="sider">
         <el-menu :default-active="active" class="sider-menu" @select="onSelect">
@@ -44,9 +44,43 @@ const onSelect = (key: string) => { active.value = key }
 </script>
 
 <style scoped lang="scss">
-.layout__body { display: flex; gap: 16px; }
-.sider { width: 180px; }
-.content { flex: 1; min-height: 400px; }
+.layout__body {
+  display: flex;
+  gap: 16px;
+  max-width: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+.sider {
+  flex: 0 0 180px;
+  width: 180px;
+}
+.content {
+  flex: 1;
+  min-width: 0;
+  min-height: 400px;
+  max-height: calc(92vh - 170px);
+  overflow: auto;
+}
+
+:deep(.account-detail-dialog) {
+  display: flex;
+  flex-direction: column;
+  max-height: 92vh;
+  overflow: hidden;
+}
+
+:deep(.account-detail-dialog .el-dialog__body) {
+  flex: 1;
+  max-width: 100%;
+  min-height: 0;
+  max-height: calc(92vh - 120px);
+  overflow: hidden;
+}
+
+:deep(.account-detail-dialog .el-dialog__footer) {
+  flex: 0 0 auto;
+  max-width: 100%;
+  overflow: hidden;
+}
 </style>
-
-

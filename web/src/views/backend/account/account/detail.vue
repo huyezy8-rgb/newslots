@@ -47,15 +47,19 @@ const onSelect = (key: string) => {
   .layout__body {
     display: flex;
     gap: 16px;
+    max-width: 100%;
+    overflow: hidden;
   }
   .sider {
+    flex: 0 0 180px;
     width: 180px;
   }
   .content {
     flex: 1;
+    min-width: 0;
     min-height: 400px;
+    overflow-x: auto;
   }
 }
 </style>
-
 
