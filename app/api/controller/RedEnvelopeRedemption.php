@@ -25,19 +25,22 @@ class RedEnvelopeRedemption extends Base
             }
 
 // 查询最大兑换次数
-            $maxTimes = Config::where('name', 'maximum_daily_redemption_times')
+            $maxTimesValue = Config::where('name', 'maximum_daily_redemption_times')
                 ->value('value');
-            $maxTimes = intval($maxTimes) ?: 10;
-            // 今天起始时间戳
-            $startOfToday = strtotime(date('Y-m-d'));
+            $maxTimes = ($maxTimesValue === null || $maxTimesValue === '') ? 10 : intval($maxTimesValue);
 
-            // 查询今天兑换次数
-            $count = RedEnvelopeRedemptionRecord::where('user_id', $this->userInfo->id)
-                ->where('create_time', '>=', $startOfToday)
-                ->count();
+            if ($maxTimes > 0) {
+                // 今天起始时间戳
+                $startOfToday = strtotime(date('Y-m-d'));
 
-            if ($count >= $maxTimes) {
-               $this->error(__('Today redemption times reached limit')); // 今日兑换次数已达上限
+                // 查询今天兑换次数
+                $count = RedEnvelopeRedemptionRecord::where('user_id', $this->userInfo->id)
+                    ->where('create_time', '>=', $startOfToday)
+                    ->count();
+
+                if ($count >= $maxTimes) {
+                   $this->error(__('Today redemption times reached limit')); // 今日兑换次数已达上限
+                }
             }
 
             // 查找兑换码（不再检查is_used，因为改为一码多用）

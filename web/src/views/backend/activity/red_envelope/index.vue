@@ -17,8 +17,10 @@
                                 v-else-if="field.type === 'number'"
                                 v-model.number="formData[field.name]"
                                 type="number"
+                                :min="field.name === 'maximum_daily_redemption_times' ? 0 : undefined"
                                 :placeholder="`请输入${field.title}`"
                             />
+                            <div v-if="field.name === 'maximum_daily_redemption_times'" class="form-tip">填 0 表示不限制每日兑换次数</div>
                             <!-- 其他类型可扩展 -->
                         </el-form-item>
                     </template>
@@ -137,6 +139,13 @@ const prettyPrintJSON = (obj: any) => {
 .config-form {
     padding: 24px;
     background: #fff;
+}
+
+.form-tip {
+    margin-top: 6px;
+    color: #909399;
+    font-size: 12px;
+    line-height: 18px;
 }
 
 /* 金额配置容器 */
