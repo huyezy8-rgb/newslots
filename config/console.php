@@ -19,5 +19,7 @@ return [
         'member:monthly-reward'=>'app\command\MemberMonthlyReward',
         'seven-day-card:daily'=>'app\command\SevenDayCardDailyReward',
         'payment:test-callback'=>'app\command\Payment\TestCallback',
+        'tg:send'=>'app\command\TgSend',
+        'tg:stats'=>'app\command\TgStats',
     ],
 ];
