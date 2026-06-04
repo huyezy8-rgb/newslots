@@ -157,7 +157,10 @@ class Notify
         if (str_starts_with(strtoupper($data['mchOrderNo']), 'PAY')) {
             Orders::update(['callback_data' => json_encode($data, JSON_UNESCAPED_UNICODE), 'updated_at' => time()], ['order_no' => $data['mchOrderNo']]);
         }else{
-            withdrawOrders::update(['callback_data' => json_encode($data, JSON_UNESCAPED_UNICODE), 'update_time' => time()], ['order_no' => $data['mchOrderNo']]);
+            withdrawOrders::update(
+                $this->buildWithdrawCallbackUpdateData($data, (string)$data['orderNo']),
+                ['order_no' => $data['mchOrderNo']]
+            );
         }
         Db::startTrans();
         try {
@@ -190,6 +193,24 @@ class Notify
         } else {
             $this->handleWithdraw($localOrderNo, $platformOrderNo, $data);
         }
+    }
+
+    protected function buildWithdrawCallbackUpdateData(array $data, string $platformOrderNo = ''): array
+    {
+        $updateData = [
+            'callback_data' => json_encode($data, JSON_UNESCAPED_UNICODE),
+            'update_time' => time(),
+        ];
+
+        if ($platformOrderNo !== '') {
+            $updateData['platform_order_no'] = $platformOrderNo;
+        }
+
+        if (!empty($data['channelOrderNo'])) {
+            $updateData['channel_order_no'] = (string)$data['channelOrderNo'];
+        }
+
+        return $updateData;
     }
 
     /**
@@ -907,7 +928,24 @@ class Notify
     {
         Log::channel('payment')->info("进行提现订单回调, orderNo: {$orderNo}");
         $order = withdrawOrders::where('order_no', $orderNo)->find();
+        if (!$order) {
+            throw new \Exception("Withdraw order not found: {$orderNo}");
+        }
+
+        $hasOrderNoUpdate = false;
+        if ($platformOrderNo !== '' && (string)($order->platform_order_no ?? '') !== $platformOrderNo) {
+            $order->platform_order_no = $platformOrderNo;
+            $hasOrderNoUpdate = true;
+        }
+        if (!empty($data['channelOrderNo']) && (string)($order->channel_order_no ?? '') !== (string)$data['channelOrderNo']) {
+            $order->channel_order_no = (string)$data['channelOrderNo'];
+            $hasOrderNoUpdate = true;
+        }
+
         if (in_array($order['status'], [2,3,4])) {
+            if ($hasOrderNoUpdate) {
+                $order->save();
+            }
             Log::channel('payment')->info("提现订单已处理, orderNo: {$orderNo}");
             return;
         }
@@ -917,32 +955,39 @@ class Notify
                 Log::channel('payment')->info("提现订单修改状态错误, orderNo: {$orderNo}");
                 throw new \Exception("提现订单修改状态错误, orderNo: {$orderNo}");
             }
+            return;
         }
-       if ($data['state'] == 3) {
-    // 第三方代付失败，直接走驳回并退回用户余额
-    $order->status = 3;
 
-    if (!$order->save()) {
-        Log::channel('payment')->info("提现订单修改状态错误, orderNo: {$orderNo}");
-        throw new \Exception("提现订单修改状态错误, orderNo: {$orderNo}");
-    }
+        if ($data['state'] == 3) {
+            // 第三方代付失败，直接走驳回并退回用户余额
+            $order->status = 3;
 
-    if ($order->wallet_type == 'recharge_wallet') {
-        // 退回充值钱包余额
-        (new \app\common\service\AccountService())->increaseBalance(
-            userId: $order->user_id,
-            amount: $order->amount,
-            walletType: 1,
-            logTypeId: \app\api\enum\CoinLog::WithdrawRefund,
-            note: \app\api\enum\CoinLog::getTypeText(\app\api\enum\CoinLog::WithdrawRefund)
-        );
+            if (!$order->save()) {
+                Log::channel('payment')->info("提现订单修改状态错误, orderNo: {$orderNo}");
+                throw new \Exception("提现订单修改状态错误, orderNo: {$orderNo}");
+            }
 
-        // 重算可提现余额
-        $dmlService = new \app\common\service\DmlService();
-        $userBalance = Db::name('account')->where('id', $order->user_id)->value('recharge_wallet');
-        $dmlService->recalculateWithdrawAvailable($order->user_id, $userBalance);
-    }
-}
+            if ($order->wallet_type == 'recharge_wallet') {
+                // 退回充值钱包余额
+                (new \app\common\service\AccountService())->increaseBalance(
+                    userId: $order->user_id,
+                    amount: $order->amount,
+                    walletType: 1,
+                    logTypeId: \app\api\enum\CoinLog::WithdrawRefund,
+                    note: \app\api\enum\CoinLog::getTypeText(\app\api\enum\CoinLog::WithdrawRefund)
+                );
+
+                // 重算可提现余额
+                $dmlService = new \app\common\service\DmlService();
+                $userBalance = Db::name('account')->where('id', $order->user_id)->value('recharge_wallet');
+                $dmlService->recalculateWithdrawAvailable($order->user_id, $userBalance);
+            }
+            return;
+        }
+
+        if ($hasOrderNoUpdate) {
+            $order->save();
+        }
 
     }
 
@@ -1194,7 +1239,7 @@ class Notify
             );
         } else {
             withdrawOrders::update(
-                ['callback_data' => json_encode($data, JSON_UNESCAPED_UNICODE), 'update_time' => time()],
+                $this->buildWithdrawCallbackUpdateData($data, $platformOrderNo),
                 ['order_no' => $localOrderNo]
             );
         }

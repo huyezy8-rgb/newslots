@@ -3,7 +3,7 @@
       <el-alert class="ba-table-alert" v-if="baTable.table.remark" :title="baTable.table.remark" type="info" show-icon />
 
       <TableHeader
-          :buttons="['refresh', 'comSearch', 'quickSearch', 'columnDisplay']"
+          :buttons="['refresh', 'export', 'comSearch', 'quickSearch', 'columnDisplay']"
           :quick-search-placeholder="t('Quick search placeholder', { fields: t('withdraw.orders.quick Search Fields') })"
       />
 
@@ -193,7 +193,9 @@ const baTable = new baTableClass(
           { label: t('withdraw.orders.id'), prop: 'id', align: 'center', width: 70, operator: 'RANGE', sortable: 'custom' },
           { label: t('withdraw.orders.channel_id'), prop: 'channel_id', align: 'center', operator: adminInfo.isAdminChannelId == null ? '=' : false, operatorPlaceholder: t('Fuzzy query') },
           { label: t('withdraw.orders.user_id'), prop: 'user_id', align: 'center', operator: 'LIKE', operatorPlaceholder: t('Fuzzy query'), sortable: true },
-          { label: "订单编号", prop: 'order_no', align: 'center',width: 100,  operator: 'LIKE'},
+          { label: t('withdraw.orders.platform_order_no'), prop: 'platform_order_no', align: 'center', width: 180, operator: 'LIKE', operatorPlaceholder: t('Fuzzy query') },
+          { label: t('withdraw.orders.order_no'), prop: 'order_no', align: 'center', width: 180, operator: 'LIKE', operatorPlaceholder: t('Fuzzy query') },
+          { label: t('withdraw.orders.channel_order_no'), prop: 'channel_order_no', align: 'center', width: 180, operator: 'LIKE', operatorPlaceholder: t('Fuzzy query') },
           {
               label: "提现方式",
               prop: 'pay_type',

@@ -37,7 +37,7 @@ class Orders extends Backend
      * 快速搜索字段
      * @var array
      */
-    protected string|array $quickSearchField = ['id', 'order_no','user_id'];
+    protected string|array $quickSearchField = ['id', 'order_no', 'platform_order_no', 'channel_order_no', 'user_id'];
     /**
      * 可编辑字段
      * @var array

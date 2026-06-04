@@ -1,5 +1,8 @@
 export default {
     id: '主键',
+    order_no: '商户订单号',
+    platform_order_no: '平台订单号',
+    channel_order_no: '渠道订单号',
     user_id: '用户ID',
     channel_id: '渠道ID',
     amount: '提现金额',
@@ -13,5 +16,5 @@ export default {
     update_time: '更新时间',
     passConfirm: '确认通过该提现订单？',
     rejectConfirm: '确认驳回该提现订单？',
-    'quick Search Fields': '主键',
+    'quick Search Fields': '主键、商户订单号、平台订单号、渠道订单号、用户ID',
 }

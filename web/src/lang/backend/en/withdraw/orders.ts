@@ -1,5 +1,8 @@
 export default {
     id: 'id',
+    order_no: 'merchant_order_no',
+    platform_order_no: 'platform_order_no',
+    channel_order_no: 'channel_order_no',
     user_id: 'user_id',
     channel_id: 'channel_id',
     amount: 'amount',
@@ -11,5 +14,5 @@ export default {
     audit_remark: 'audit_remark',
     create_time: 'create_time',
     update_time: 'update_time',
-    'quick Search Fields': 'id',
+    'quick Search Fields': 'id, merchant_order_no, platform_order_no, channel_order_no, user_id',
 }
