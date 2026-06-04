@@ -593,22 +593,32 @@ if ($this->isTestPay($payType)) {
     // 13位毫秒时间戳
     $timestamp = (int) round(microtime(true) * 1000);
 
-$payway = rtrim($succusApiUrl, '/') . '/pay/create';
+    $payway = rtrim($succusApiUrl, '/') . '/pay/create';
+    $wayParam = [
+        "clientId" => (string)$this->userInfo['id']
+    ];
+
+    foreach (['deviceId', 'email', 'phone', 'payerTerminalScene'] as $field) {
+        $value = $param[$field] ?? null;
+        if ($value !== null && $value !== '') {
+            $wayParam[$field] = (string)$value;
+        }
+    }
+
     $payarr = [
         "mchNo"       => $succusMchNo,
         "mchOrderNo"  => $orderno,
         "amount"      => $amountCent,
         "currency"    => "usd",
         "wayCode"     => $wayCode,
+        "clientIp"    => $this->request->ip(),
         "notifyUrl"   => "https://{$_SERVER['HTTP_HOST']}/index.php/api/notify/succuspay",
         "returnUrl"   => $return_url,
         "expiredTime" => 1800,
         "timestamp"   => $timestamp,
         "signType"    => "MD5",
         // wayParam 必须是对象，不能是字符串
-        "wayParam"    => [
-            "clientId" => (string)$this->userInfo['id']
-        ]
+        "wayParam"    => $wayParam
     ];
 
     // 递归排序 + 去空值
