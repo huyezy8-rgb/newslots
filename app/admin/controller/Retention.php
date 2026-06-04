@@ -44,11 +44,11 @@ class Retention extends Backend
         if ($allDays > 30) {
             $cur = $end - 86400 * 29;
             for ($i = 0; $i < 30; $i++) {
-                $dateList[] = date('Ymd', $cur + 86400 * $i);
+                $dateList[] = date('Y-m-d', $cur + 86400 * $i);
             }
         } else {
             while ($cur <= $end) {
-                $dateList[] = date('Ymd', $cur);
+                $dateList[] = date('Y-m-d', $cur);
                 $cur += 86400;
             }
         }

@@ -152,7 +152,7 @@ class Dashboard extends Backend
             $rechargeStats = $this->getRechargeStats($startOfDay, $endOfDay, $channelId, $userIds);
             $paidUsers = $rechargeStats['paid_users'];
             $totalRechargeAmount = $rechargeStats['paid_amount'];
-            $withdrawalAmount = $operationData['all_withdraw_amount'] ?? 0; // 提现金额
+            $withdrawalAmount = $this->getWithdrawalAmount($startOfDay, $endOfDay, $channelId, $userIds);
             
             $data = [
                 // ==================== 用户统计指标 ====================
@@ -817,7 +817,19 @@ private function getTotalRechargeAmount(int $startOfDay, int $endOfDay, ?int $ch
         $orders = $query->select()->toArray();
         return count(array_unique(array_column($orders, 'user_id')));
     }
+private function getWithdrawalAmount(int $startOfDay, int $endOfDay, ?int $channelId, array $userIds): float
+{
+    $query = Db::name('withdraw_orders')
+        ->where('status', 2)
+        ->where('create_time', '>=', $startOfDay)
+        ->where('create_time', '<=', $endOfDay);
 
+    if ($channelId) {
+        $query->whereIn('user_id', $userIds);
+    }
+
+    return (float)$query->sum('amount');
+}
     /**
      * 计算提现率
      * 

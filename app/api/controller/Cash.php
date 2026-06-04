@@ -190,6 +190,8 @@ if ($user_info['switch_wallet'] == 1) {
 
 if ($params['Reason'] === 'bet') {
     $releaseAmount = abs((float)$params['Amount']);
+} elseif ($params['Reason'] === 'win') {
+    $releaseAmount = abs((float)$params['Amount']);
 }
     if ($releaseAmount > 0) {
         // 根据打码量计算：下注和派奖都释放可提现额度

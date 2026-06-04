@@ -918,13 +918,31 @@ class Notify
                 throw new \Exception("提现订单修改状态错误, orderNo: {$orderNo}");
             }
         }
-        if ($data['state'] == 3) {
-            $order->status = 4;
-            if (!$order->save()) {
-                Log::channel('payment')->info("提现订单修改状态错误, orderNo: {$orderNo}");
-                throw new \Exception("提现订单修改状态错误, orderNo: {$orderNo}");
-            }
-        }
+       if ($data['state'] == 3) {
+    // 第三方代付失败，直接走驳回并退回用户余额
+    $order->status = 3;
+
+    if (!$order->save()) {
+        Log::channel('payment')->info("提现订单修改状态错误, orderNo: {$orderNo}");
+        throw new \Exception("提现订单修改状态错误, orderNo: {$orderNo}");
+    }
+
+    if ($order->wallet_type == 'recharge_wallet') {
+        // 退回充值钱包余额
+        (new \app\common\service\AccountService())->increaseBalance(
+            userId: $order->user_id,
+            amount: $order->amount,
+            walletType: 1,
+            logTypeId: \app\api\enum\CoinLog::WithdrawRefund,
+            note: \app\api\enum\CoinLog::getTypeText(\app\api\enum\CoinLog::WithdrawRefund)
+        );
+
+        // 重算可提现余额
+        $dmlService = new \app\common\service\DmlService();
+        $userBalance = Db::name('account')->where('id', $order->user_id)->value('recharge_wallet');
+        $dmlService->recalculateWithdrawAvailable($order->user_id, $userBalance);
+    }
+}
 
     }
 

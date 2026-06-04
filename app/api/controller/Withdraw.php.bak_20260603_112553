@@ -48,7 +48,7 @@ class Withdraw extends Base
         $withdraw_count =Db::name('withdraw_orders')
             ->where(['user_id' => $this->userInfo['id'], 'wallet_type' => CoinLog::walletType($typeid)])
             ->whereIn('status',[0,1,2,4])
-            ->whereBetween('create_time', [$todayStart, $todayEnd])
+            // ->whereBetweenTime('create_time',$todayStart,$todayEnd)
             ->count();
         $data['daily_withdraw_had']  = $withdraw_count;
 
@@ -209,7 +209,7 @@ $recharge_wallet = floatval($user['recharge_wallet'] ?? 0);
         $withdraw_count =Db::name('withdraw_orders')
             ->where(['user_id' => $this->userInfo['id'], 'wallet_type' => CoinLog::walletType($typeid)])
             ->whereIn('status',[0,1,2,4])
-            ->whereBetween('create_time', [$todayStart, $todayEnd])
+            // ->whereBetweenTime('create_time',$todayStart,$todayEnd)
             ->count();
         if ($withdraw_count >= $level['daily_withdraw_times']) {
             $this->error(__('Withdraw times insufficient'));
