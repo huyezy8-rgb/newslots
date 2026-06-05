@@ -39,6 +39,21 @@
                 </div>
             </el-form-item>
 
+            <el-form-item v-for="field in conditionFields" :key="field" :label="t(`payment.methods.${field}`)">
+                <div class="batch-edit-field">
+                    <el-checkbox v-model="enabled[field]">启用修改</el-checkbox>
+                    <el-input
+                        v-model="form[field]"
+                        :disabled="!enabled[field]"
+                        class="batch-edit-control"
+                        type="number"
+                        min="0"
+                        :step="field === 'condition_recharge_times' ? '1' : '0.01'"
+                        :placeholder="t('Please input field', { field: t(`payment.methods.${field}`) })"
+                    />
+                </div>
+            </el-form-item>
+
             <el-form-item :label="t('payment.methods.pay_method')">
                 <div class="batch-edit-field">
                     <el-checkbox v-model="enabled.pay_method">启用修改</el-checkbox>
@@ -84,8 +99,10 @@ const baTable = inject('baTable') as baTableClass
 const { t } = useI18n()
 
 const amountFields = ['min_recharge_amount', 'max_recharge_amount', 'min_withdraw_amount', 'max_withdraw_amount'] as const
+const conditionFields = ['condition_recharge_amount', 'condition_recharge_times'] as const
 type AmountField = (typeof amountFields)[number]
-type BatchField = AmountField | 'show' | 'status' | 'is_clause' | 'pay_method'
+type ConditionField = (typeof conditionFields)[number]
+type BatchField = AmountField | ConditionField | 'show' | 'status' | 'is_clause' | 'pay_method'
 
 const visible = ref(false)
 const loading = ref(false)
@@ -96,6 +113,8 @@ const defaultForm: Record<BatchField, any> = {
     status: '1',
     is_clause: '0',
     pay_method: '1',
+    condition_recharge_amount: 30,
+    condition_recharge_times: 3,
     min_recharge_amount: null,
     max_recharge_amount: null,
     min_withdraw_amount: null,
@@ -108,6 +127,8 @@ const enabled = reactive<Record<BatchField, boolean>>({
     status: false,
     is_clause: false,
     pay_method: false,
+    condition_recharge_amount: false,
+    condition_recharge_times: false,
     min_recharge_amount: false,
     max_recharge_amount: false,
     min_withdraw_amount: false,
@@ -140,6 +161,20 @@ const normalizeAmount = (field: AmountField) => {
     return amount
 }
 
+const normalizeCondition = (field: ConditionField) => {
+    const value = form[field]
+    const amount = Number(value)
+    if (!Number.isFinite(amount) || amount < 0) {
+        throw new Error(t('Please enter the correct field', { field: t(`payment.methods.${field}`) }))
+    }
+
+    if (field === 'condition_recharge_times' && !Number.isInteger(amount)) {
+        throw new Error(t('Please enter the correct field', { field: t(`payment.methods.${field}`) }))
+    }
+
+    return amount
+}
+
 const buildFields = () => {
     const fields: Partial<Record<BatchField, string | number | null>> = {}
 
@@ -150,6 +185,8 @@ const buildFields = () => {
 
         if ((amountFields as readonly string[]).includes(field)) {
             fields[field] = normalizeAmount(field as AmountField)
+        } else if ((conditionFields as readonly string[]).includes(field)) {
+            fields[field] = normalizeCondition(field as ConditionField)
         } else {
             fields[field] = form[field]
         }

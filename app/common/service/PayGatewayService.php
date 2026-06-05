@@ -131,18 +131,11 @@ class PayGatewayService
 
         // 如果payChannels为空，返回所有支付方式
         if (empty($payChannels)) {
-            return $this->buildPaymentChannels($methods, 0);
+            return $this->buildPaymentChannels($this->filterDisplayableMethods($methods, $userStats), 0);
         }
 
         // 处理配置的支付渠道
-        $result = $this->processConfiguredChannels($payChannels, $methodMap, $userStats);
-        
-        // 如果没有匹配的记录，返回所有支付方式
-        // if (empty($result)) {
-            return $this->buildPaymentChannels($methods, 0);
-        // }
-
-        return $result;
+        return $this->processConfiguredChannels($payChannels, $methodMap, $userStats);
     }
 
     /**
@@ -196,7 +189,7 @@ class PayGatewayService
         }
         
         return \app\common\model\payment\Methods::where($where)
-            ->field('unique_tag, name, icon, show, is_clause, channel_code, code, pay_method, min_recharge_amount, max_recharge_amount, min_withdraw_amount, max_withdraw_amount')
+            ->field('unique_tag, name, icon, show, is_clause, condition_recharge_amount, condition_recharge_times, channel_code, code, pay_method, min_recharge_amount, max_recharge_amount, min_withdraw_amount, max_withdraw_amount')
             ->select()
             ->toArray();
     }
@@ -337,6 +330,13 @@ class PayGatewayService
         return $result;
     }
 
+    private function filterDisplayableMethods(array $methods, array $userStats): array
+    {
+        return array_values(array_filter($methods, function (array $method) use ($userStats): bool {
+            return $this->shouldDisplayChannel($method, $userStats);
+        }));
+    }
+
     /**
      * 构建提现渠道列表
      * @param array $methods
@@ -434,8 +434,10 @@ class PayGatewayService
             return true;
         }
 
-        // 按条件显示：需要满足充值金额>=30且充值次数>=3
-        return $userStats['total_amount'] >= 30 && $userStats['total_times'] >= 3;
+        $requiredAmount = max(0, (float)($method['condition_recharge_amount'] ?? 30));
+        $requiredTimes = max(0, (int)($method['condition_recharge_times'] ?? 3));
+
+        return (float)$userStats['total_amount'] >= $requiredAmount && (int)$userStats['total_times'] >= $requiredTimes;
     }
 
     /**

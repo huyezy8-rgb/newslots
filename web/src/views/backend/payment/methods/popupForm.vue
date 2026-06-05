@@ -97,6 +97,22 @@
                     />
                     <FormItem :label="t('payment.methods.is_clause')" type="switch" v-model="baTable.form.items!.is_clause" prop="is_clause" />
                     <FormItem
+                        :label="t('payment.methods.condition_recharge_amount')"
+                        type="number"
+                        v-model="baTable.form.items!.condition_recharge_amount"
+                        prop="condition_recharge_amount"
+                        :input-attr="{ min: 0, precision: 2, step: 1 }"
+                        :placeholder="t('Please input field', { field: t('payment.methods.condition_recharge_amount') })"
+                    />
+                    <FormItem
+                        :label="t('payment.methods.condition_recharge_times')"
+                        type="number"
+                        v-model="baTable.form.items!.condition_recharge_times"
+                        prop="condition_recharge_times"
+                        :input-attr="{ min: 0, precision: 0, step: 1 }"
+                        :placeholder="t('Please input field', { field: t('payment.methods.condition_recharge_times') })"
+                    />
+                    <FormItem
                         :label="t('payment.methods.pay_method')"
                         type="select"
                         v-model="baTable.form.items!.pay_method"
@@ -188,8 +204,21 @@ const normalizeAmountFields = () => {
     }
 }
 
+const normalizeConditionFields = () => {
+    const amount = Number(baTable.form.items?.condition_recharge_amount)
+    if (Number.isFinite(amount)) {
+        baTable.form.items!.condition_recharge_amount = amount
+    }
+
+    const times = Number(baTable.form.items?.condition_recharge_times)
+    if (Number.isInteger(times)) {
+        baTable.form.items!.condition_recharge_times = times
+    }
+}
+
 const onSubmit = () => {
     normalizeAmountFields()
+    normalizeConditionFields()
     baTable.onSubmit(formRef.value)
 }
 
@@ -208,12 +237,29 @@ const amountValidator = (rule: any, value: unknown, callback: (error?: Error) =>
     callback()
 }
 
+const conditionValidator = (rule: any, value: unknown, callback: (error?: Error) => void) => {
+    const amount = Number(value)
+    if (!Number.isFinite(amount) || amount < 0) {
+        callback(new Error(t('Please enter the correct field', { field: rule.field ? t(`payment.methods.${rule.field}`) : '' })))
+        return
+    }
+
+    if (rule.field === 'condition_recharge_times' && !Number.isInteger(amount)) {
+        callback(new Error(t('Please enter the correct field', { field: t('payment.methods.condition_recharge_times') })))
+        return
+    }
+
+    callback()
+}
+
 const rules: Partial<Record<string, FormItemRule[]>> = reactive({
     unique_tag: [buildValidatorData({ name: 'required', title: t('payment.methods.unique_tag') })],
     min_recharge_amount: [{ validator: amountValidator, trigger: 'blur' }],
     max_recharge_amount: [{ validator: amountValidator, trigger: 'blur' }],
     min_withdraw_amount: [{ validator: amountValidator, trigger: 'blur' }],
     max_withdraw_amount: [{ validator: amountValidator, trigger: 'blur' }],
+    condition_recharge_amount: [{ validator: conditionValidator, trigger: 'blur' }],
+    condition_recharge_times: [{ validator: conditionValidator, trigger: 'blur' }],
     create_time: [buildValidatorData({ name: 'date', title: t('payment.methods.create_time') })],
     update_time: [buildValidatorData({ name: 'date', title: t('payment.methods.update_time') })],
 })

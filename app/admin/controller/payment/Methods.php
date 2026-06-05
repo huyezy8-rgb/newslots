@@ -31,6 +31,12 @@ class Methods extends Backend
         'max_recharge_amount',
         'min_withdraw_amount',
         'max_withdraw_amount',
+        'condition_recharge_amount',
+    ];
+
+    private const CONDITION_FIELDS = [
+        'condition_recharge_amount' => 30,
+        'condition_recharge_times' => 3,
     ];
 
     private const BATCH_EDIT_FIELDS = [
@@ -42,6 +48,8 @@ class Methods extends Backend
         'max_recharge_amount',
         'min_withdraw_amount',
         'max_withdraw_amount',
+        'condition_recharge_amount',
+        'condition_recharge_times',
     ];
 
     public function initialize(): void
@@ -210,6 +218,7 @@ class Methods extends Backend
             }
 
             $data = $this->normalizeAmountFields($data);
+            $data = $this->normalizeConditionFields($data);
             $this->validateAmountRanges($data);
             $this->request->withPost($data);
             
@@ -236,6 +245,7 @@ class Methods extends Backend
             }
 
             $data = $this->normalizeAmountFields($data);
+            $data = $this->normalizeConditionFields($data);
             $this->validateAmountRanges($data);
             $this->request->withPost($data);
             
@@ -293,6 +303,9 @@ class Methods extends Backend
             }
 
             if ($fields[$field] === '' || $fields[$field] === null) {
+                if ($field === 'condition_recharge_amount') {
+                    $this->error('Invalid ' . $field);
+                }
                 $fields[$field] = null;
                 continue;
             }
@@ -306,6 +319,14 @@ class Methods extends Backend
                 $this->error('Invalid ' . $field);
             }
             $fields[$field] = $amount;
+        }
+
+        if (array_key_exists('condition_recharge_times', $fields)) {
+            $times = filter_var($fields['condition_recharge_times'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
+            if ($times === false) {
+                $this->error('Invalid condition_recharge_times');
+            }
+            $fields['condition_recharge_times'] = $times;
         }
 
         return $fields;
@@ -327,6 +348,32 @@ class Methods extends Backend
                 $data[$field] = (float)$data[$field];
             }
         }
+
+        return $data;
+    }
+
+    private function normalizeConditionFields(array $data): array
+    {
+        foreach (self::CONDITION_FIELDS as $field => $default) {
+            if (!array_key_exists($field, $data)) {
+                $data[$field] = $default;
+            }
+        }
+
+        if ($data['condition_recharge_amount'] === '' || $data['condition_recharge_amount'] === null || !is_numeric($data['condition_recharge_amount'])) {
+            $this->error('Invalid condition_recharge_amount');
+        }
+        $amount = (float)$data['condition_recharge_amount'];
+        if ($amount < 0) {
+            $this->error('Invalid condition_recharge_amount');
+        }
+        $data['condition_recharge_amount'] = $amount;
+
+        $times = filter_var($data['condition_recharge_times'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
+        if ($times === false) {
+            $this->error('Invalid condition_recharge_times');
+        }
+        $data['condition_recharge_times'] = $times;
 
         return $data;
     }

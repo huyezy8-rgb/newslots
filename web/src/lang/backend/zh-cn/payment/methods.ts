@@ -17,6 +17,8 @@ export default {
     'pay_method 0': '所有方式',
     'pay_method 1': '充值',
     'pay_method 2': '提现',
+    condition_recharge_amount: '条件显示最小成功充值金额',
+    condition_recharge_times: '条件显示最小成功充值次数',
     min_recharge_amount: '最小充值金额',
     max_recharge_amount: '最大充值金额',
     min_withdraw_amount: '最小提现金额',

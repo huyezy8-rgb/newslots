@@ -17,6 +17,8 @@ export default {
     'pay_method 0': 'pay_method 0',
     'pay_method 1': 'pay_method 1',
     'pay_method 2': 'pay_method 2',
+    condition_recharge_amount: 'Minimum successful recharge amount',
+    condition_recharge_times: 'Minimum successful recharge times',
     min_recharge_amount: 'Min recharge amount',
     max_recharge_amount: 'Max recharge amount',
     min_withdraw_amount: 'Min withdraw amount',
