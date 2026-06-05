@@ -23,6 +23,8 @@ use think\facade\Db;
 
 class Recharge extends Base
 {
+    private const SUCCUS_PAY_CONFIG_ERROR_MESSAGE = '支付通道配置异常，请联系管理员';
+
     protected PayGatewayService $payService;
 
     // 所有启用的活动标识
@@ -48,6 +50,58 @@ class Recharge extends Base
     protected function getPayService(): PayGatewayService
     {
         return $this->payService ??= new PayGatewayService();
+    }
+
+    private function getSuccusPayConfig(): array
+    {
+        $channel = Db::name('payment_channels')
+            ->where('code', 'Succus')
+            ->where('status', 1)
+            ->find();
+
+        if (!$channel) {
+            $this->failSuccusPayConfig('payment channel is not enabled');
+        }
+
+        $config = $channel['config'] ?? null;
+        if (is_string($config)) {
+            $config = json_decode(html_entity_decode($config), true);
+        }
+
+        if (!is_array($config)) {
+            $this->failSuccusPayConfig('payment channel config is invalid', [
+                'channel_id' => $channel['id'] ?? null,
+                'json_error' => json_last_error_msg(),
+            ]);
+        }
+
+        $succusConfig = [
+            'api_url' => trim((string)($config['api_url'] ?? '')),
+            'mchNo'   => trim((string)($config['mchNo'] ?? $config['mch_no'] ?? '')),
+            'key'     => trim((string)($config['key'] ?? '')),
+        ];
+
+        foreach (['api_url', 'mchNo', 'key'] as $field) {
+            if ($succusConfig[$field] === '') {
+                $this->failSuccusPayConfig('payment channel config missing ' . $field, [
+                    'channel_id' => $channel['id'] ?? null,
+                    'config_keys' => array_keys($config),
+                ]);
+            }
+        }
+
+        return $succusConfig;
+    }
+
+    private function failSuccusPayConfig(string $reason, array $context = []): void
+    {
+        try {
+            \think\facade\Log::channel('payment')->error('SuccusPay config error: ' . $reason, $context);
+        } catch (\Throwable $e) {
+            \think\facade\Log::error('SuccusPay config error: ' . $reason . '; log channel failed: ' . $e->getMessage());
+        }
+
+        throw new \RuntimeException(self::SUCCUS_PAY_CONFIG_ERROR_MESSAGE);
     }
 
     /**
@@ -562,11 +616,10 @@ if ($this->isTestPay($payType)) {
     $response = json_encode($res, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 } elseif (in_array(strtolower($payType), ['saxpay', 'cashapp', 'card', 'zelle', 'paypal', 'googleorapple', 'google', 'apple', 'btclightning', 'btconchain', 'pcashapp', 'pyusd'])) {
 
-    // ====== 这里改成你自己的 SuccusPay 配置 ======
-    $succusApiUrl = 'https://www.succuspay.com/api';
-    $succusMchNo  = '2026058333';
-    $succusKey    = 'AE1F6561u7Xv038He8T7tI6S5gbY1522';
-    // ==========================================
+    $succusConfig = $this->getSuccusPayConfig();
+    $succusApiUrl = $succusConfig['api_url'];
+    $succusMchNo  = $succusConfig['mchNo'];
+    $succusKey    = $succusConfig['key'];
 
     // 前端传进来的 pay_type 映射成 SuccusPay 的 wayCode
     $wayCodeMap = [
@@ -803,6 +856,9 @@ if (!$res || empty($res['data']['payOrderNo']) || (!$this->isTestPay($payType) &
             Db::commit();
         } catch (\Throwable $e) {
             Db::rollback();
+            if ($e->getMessage() === self::SUCCUS_PAY_CONFIG_ERROR_MESSAGE) {
+                $this->error($e->getMessage());
+            }
             $this->error(__('Create order failed'), $e->getMessage()); // 创建订单失败
         }
 
