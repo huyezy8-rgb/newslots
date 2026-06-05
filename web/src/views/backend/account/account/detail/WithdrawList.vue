@@ -6,7 +6,7 @@
     </el-table-column>
     <el-table-column label="状态">
       <template #default="{ row }">
-        <el-tag :type="getStatusType(row.status)">{{ getStatusText(row.status) }}</el-tag>
+        <el-tag :type="getStatusType(row.status)">{{ getStatusText(row) }}</el-tag>
       </template>
     </el-table-column>
     <el-table-column label="申请时间">
@@ -104,13 +104,19 @@ const formatTime = (v: any) => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
 }
 
-const getStatusText = (status: any) => {
-  const s = Number(status)
+const getStatusText = (row: any) => {
+  const s = Number(row?.status)
+  if (s === 3) {
+    const rejectSource = Number(row?.reject_source || 0)
+    if (rejectSource === 1) return '手动驳回'
+    if (rejectSource === 2) return '第三方驳回'
+    return '已驳回'
+  }
+
   switch (s) {
     case 0: return '待审核'
     case 1: return '审核通过'
     case 2: return '已打款'
-    case 3: return '已驳回'
     case 4: return '打款失败'
     default: return '未知状态'
   }

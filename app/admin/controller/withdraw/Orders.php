@@ -521,6 +521,7 @@ class Orders extends Backend
         try {
             // 设置订单状态为驳回
             $order->status = 3;
+            $order->reject_source = 1;
             if (!$order->save()){
                 throw new \Exception('驳回失败');
             };

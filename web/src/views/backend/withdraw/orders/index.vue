@@ -231,11 +231,17 @@ const baTable = new baTableClass(
               operator: 'RANGE',
               render: 'tags',
               formatter(row, column, cellValue, index) {
+                  if (Number(cellValue) === 3) {
+                      const rejectSource = Number(row.reject_source || 0)
+                      if (rejectSource === 1) return '手动驳回'
+                      if (rejectSource === 2) return '第三方驳回'
+                      return '已驳回'
+                  }
+
                   const map: Record<string, string> = {
                       0: '待审核',
                       1: '已通过',
                       2: '已打款',
-                      3: '已驳回',
                       4: '打款失败',
                   }
                   return map[String(cellValue)] || cellValue

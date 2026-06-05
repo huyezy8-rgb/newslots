@@ -961,6 +961,7 @@ class Notify
         if ($data['state'] == 3) {
             // 第三方代付失败，直接走驳回并退回用户余额
             $order->status = 3;
+            $order->reject_source = 2;
 
             if (!$order->save()) {
                 Log::channel('payment')->info("提现订单修改状态错误, orderNo: {$orderNo}");
